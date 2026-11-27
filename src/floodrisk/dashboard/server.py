@@ -1085,6 +1085,8 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         try:
             self._handle_get()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
         except Exception:
             logger.exception("Unhandled error in GET %s", self.path)
             self._send_error_json(500, "INTERNAL_SERVER_ERROR", "Internal server error", "An unexpected error occurred.")
@@ -1322,14 +1324,15 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             self._send_error_json(404, "ENDPOINT_NOT_FOUND", "Endpoint not found", f"No route registered for '{clean_path}'")
             return
 
-        # Serve static HTML console
-        if clean_path in ("/", "/index.html"):
-            index_path = Path(__file__).resolve().parent / "static" / "index.html"
-            if index_path.is_file():
+        # Serve static HTML console and civilian safety page
+        if clean_path in ("/", "/index.html", "/civilian-alert.html"):
+            fname = "civilian-alert.html" if clean_path == "/civilian-alert.html" else "index.html"
+            html_path = Path(__file__).resolve().parent / "static" / fname
+            if html_path.is_file():
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self._send_security_headers(is_api=False)
-                with open(index_path, "rb") as f:
+                with open(html_path, "rb") as f:
                     content = f.read()
                 self.send_header("Content-Length", str(len(content)))
                 self.end_headers()
@@ -1407,6 +1410,8 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         try:
             self._handle_post()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
         except Exception:
             logger.exception("Unhandled error in POST %s", self.path)
             self._send_error_json(500, "INTERNAL_SERVER_ERROR", "Internal server error", "An unexpected error occurred.")

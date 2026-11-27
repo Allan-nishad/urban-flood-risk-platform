@@ -735,6 +735,108 @@
 
     /* ─── Tab content padding ─── */
     .tab-content-padded { padding: 16px; }
+
+    /* ─── Automatic Alert & Flood Alert Center ─── */
+    .auto-alert-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #dc2626;
+      color: #ffffff;
+      border: 1px solid #f87171;
+      border-radius: 5px;
+      padding: 6px 13px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .auto-alert-btn:hover { background: #b91c1c; }
+
+    .flood-alert-center {
+      margin: 6px 24px 12px 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .fac-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .zone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .zone-card {
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 11px;
+    }
+    .zone-card.zone-affected { border-left-color: #ef4444; background: rgba(239,68,68,0.08); }
+    .zone-card.zone-caution  { border-left-color: #f59e0b; }
+
+    .danger-popup {
+      display: none;
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      max-width: 440px;
+      width: calc(100% - 32px);
+      background: #1a0b0e;
+      border: 2px solid #ef4444;
+      border-radius: 8px;
+      padding: 16px;
+      z-index: 9500;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.65);
+      color: #fee2e2;
+    }
+    .danger-popup.open { display: block; }
+
+    .alert-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 12, 24, 0.72);
+      z-index: 9600;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .alert-modal-backdrop.open { display: flex; }
+    .alert-modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      max-width: 520px;
+      width: 100%;
+      padding: 18px 20px;
+      color: var(--text-main);
+      box-shadow: var(--shadow-md);
+    }
+    .form-select {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      font-size: 12px;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -749,6 +851,14 @@
       <div class="brand-subtitle">ECMWF/GFS NWP &bull; SRTM/WorldCover MCDA &bull; Stage 3 Experimental ML &bull; Internal Research Use Only</div>
     </div>
     <div class="header-status">
+      <button id="autoAlertBtn" class="auto-alert-btn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        AUTOMATIC ALERT
+      </button>
       <div class="status-pill">
         <span class="pulse-dot" id="headerPulseDot"></span>
         <span id="headerStatusText">Connecting...</span>
@@ -843,6 +953,129 @@
       <div class="kpi-note">Historical Archive &amp; Watch Log</div>
     </div>
   </section>
+
+  <!-- ===== FLOOD ALERT CENTER ===== -->
+  <section id="floodAlertCenter" class="flood-alert-center">
+    <div class="fac-header">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="font-size:13px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase;">FLOOD ALERT CENTER</span>
+        <span id="facStatusBadge" class="state-badge state-resolved">NORMAL MONITORING</span>
+        <span class="chip chip-info">Active Alerts: <strong id="floodCenterActiveCount">0</strong></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <a id="viewCivilianAlertBtn" href="/civilian-alert.html" target="_blank" rel="noopener"
+           class="action-btn" style="background:#dc2626; text-decoration:none; display:none;">VIEW CIVILIAN ALERT</a>
+        <a href="/civilian-alert.html" target="_blank" rel="noopener"
+           class="action-btn-sm" style="text-decoration:none;">Civilian Safety Page</a>
+        <button id="facResetDemoBtn" class="action-btn-sm" type="button">Reset Demo</button>
+      </div>
+    </div>
+
+    <div id="zoneCardsGrid" class="zone-grid">
+      <div class="zone-card">Loading Bengaluru zones...</div>
+    </div>
+
+    <div class="section-heading" style="margin-top:4px;">
+      <span class="track-label" style="background:#3b82f6; color:#fff;">Log</span>
+      Unified Alert History (Real Data &amp; Browser-Local Demo)
+      <span style="font-size:10px; font-weight:400; color:var(--text-muted);">
+        Browser-local DEMO history is stored in localStorage only and is not shared across devices.
+      </span>
+    </div>
+    <div class="data-table-container" style="max-height:190px;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Alert ID</th>
+            <th>Zone</th>
+            <th>Severity</th>
+            <th>Rainfall Scenario</th>
+            <th>Timestamp</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="unifiedAlertHistoryTbody">
+          <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No alerts recorded.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Danger Alert Popup (non-obstructive floating card) -->
+  <div id="dangerAlertPopup" class="danger-popup" role="alertdialog" aria-labelledby="dangerPopupTitle">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+      <div id="dangerPopupSourceBadge" class="chip chip-warning" style="font-size:10px;">DEMONSTRATION ALERT — SIMULATED DATA — NOT A REAL EMERGENCY</div>
+      <button id="dangerPopupCloseBtn" type="button" class="action-btn-sm" style="color:#fecaca; border-color:#7f1d1d;">Dismiss</button>
+    </div>
+    <h3 id="dangerPopupTitle" style="font-size:16px; font-weight:800; color:#fff; margin:8px 0 4px 0;">HEAVY RAINFALL WARNING</h3>
+    <div id="dangerPopupBody" style="font-size:12px; color:#fecaca; line-height:1.5; margin-bottom:10px;"></div>
+    <div style="font-size:11px; color:#fde68a; margin-bottom:12px;">
+      <strong>Precautionary Actions:</strong> Avoid low-lying roads and underpasses. Stay clear of exposed electrical infrastructure. Follow official IMD/KSNDMC/BBMP advisories.
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a id="popupViewCivilianBtn" href="/civilian-alert.html" target="_blank" rel="noopener"
+         class="action-btn" style="background:#dc2626; text-decoration:none;">VIEW CIVILIAN ALERT</a>
+      <button id="popupAckBtn" type="button" class="action-btn-sm" style="color:#fff;">Acknowledge</button>
+    </div>
+  </div>
+
+  <!-- Automatic Alert Control Modal -->
+  <div id="autoAlertModal" class="alert-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="autoAlertModalTitle">
+    <div class="alert-modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 id="autoAlertModalTitle" style="font-size:15px; font-weight:800;">Automatic Alert &amp; Demonstration Control</h3>
+        <button id="closeAutoAlertModalBtn" type="button" class="action-btn-sm">Close</button>
+      </div>
+
+      <div style="background:var(--bg-surface-secondary); border:1px solid var(--border-color); border-radius:6px; padding:12px; margin-bottom:12px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#60a5fa; margin-bottom:6px;">
+          A. Real-Data Threshold Evaluation (Open-Meteo ECMWF IFS)
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
+          Evaluates live V8 forecast data against provisional thresholds. Never generates a real-data alert if data is stale or unavailable.
+        </p>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button id="runRealAlertEvalBtn" type="button" class="action-btn">Evaluate Real Data Now</button>
+          <span id="realEvalStatusMsg" style="font-size:11px; color:var(--text-muted);"></span>
+        </div>
+      </div>
+
+      <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:6px; padding:12px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#fbbf24; margin-bottom:6px;">
+          B. Controlled Demonstration Mode (DEMO MODE — Simulated Data)
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
+          For presentation &amp; workflow testing. These are demonstration scenarios, not scientifically calibrated flood thresholds.
+        </p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:600;">
+            Bengaluru Zone
+            <select id="demoZoneSelect" class="form-select">
+              <option value="North Bengaluru">North Bengaluru</option>
+              <option value="South Bengaluru">South Bengaluru</option>
+              <option value="East Bengaluru" selected>East Bengaluru</option>
+              <option value="West Bengaluru">West Bengaluru</option>
+            </select>
+          </label>
+          <label style="font-size:11px; font-weight:600;">
+            Simulated Rainfall Scenario
+            <select id="demoRainSelect" class="form-select">
+              <option value="10">10 mm/hour — Normal</option>
+              <option value="20">20 mm/hour — Moderate</option>
+              <option value="35">35 mm/hour — High</option>
+              <option value="50" selected>50 mm/hour — Severe</option>
+            </select>
+          </label>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="triggerDemoAlertBtn" type="button" class="action-btn" style="background:#dc2626;">Trigger Demo Alert</button>
+          <button id="modalResetDemoBtn" type="button" class="action-btn-sm">Reset Demo</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ===== CONSOLE: MAP + SIDE PANEL ===== -->
   <section class="console-layout">
@@ -1555,6 +1788,8 @@
     let map;
     let gridLayer;
     let incidentMarkersLayer;
+    let demoZoneLayer;
+    let demoDestLayer;
     let bboxLayer;
     let sarExtentLayer;
     let activeLayerType = "dynamic";
@@ -1643,6 +1878,8 @@
       });
 
       incidentMarkersLayer = L.layerGroup().addTo(map);
+      demoZoneLayer = L.layerGroup().addTo(map);
+      demoDestLayer = L.layerGroup().addTo(map);
 
       legendControl = L.control({position: 'bottomright'});
       legendControl.onAdd = function() {
@@ -2436,11 +2673,302 @@
                 <td style="font-size:10px; color:var(--text-muted);">${a.updated_at_utc}${a.resolution_note ? '<br>' + a.resolution_note : ''}</td>
                 <td><span class="state-badge ${getStateClass(a.lifecycle_state)}">${a.lifecycle_state}</span></td>
               </tr>`).join('');
+          window.__realAlertsCache = alerts;
         }
+        await loadZoneMonitoring();
+        renderUnifiedAlertHistory();
       } catch (e) {
         console.warn("Alert load error:", e);
       }
     }
+
+    // ─── Bengaluru 4-Zone Monitoring & Automatic Alert / Demo Center ───
+    const BLR_ZONES = {
+      "North Bengaluru": { bounds: [[13.01, 77.45], [13.15, 77.75]], center: [13.075, 77.590], latMin: 13.01, latMax: 13.15, lonMin: 77.45, lonMax: 77.75 },
+      "South Bengaluru": { bounds: [[12.85, 77.45], [12.96, 77.66]], center: [12.905, 77.585], latMin: 12.85, latMax: 12.96, lonMin: 77.45, lonMax: 77.66 },
+      "East Bengaluru":  { bounds: [[12.90, 77.64], [13.03, 77.75]], center: [12.9698, 77.6900], latMin: 12.90, latMax: 13.03, lonMin: 77.64, lonMax: 77.75 },
+      "West Bengaluru":  { bounds: [[12.90, 77.45], [13.02, 77.57]], center: [12.970, 77.505], latMin: 12.90, latMax: 13.02, lonMin: 77.45, lonMax: 77.57 }
+    };
+
+    const DEMO_DESTINATIONS = [
+      { name: "Cubbon Park High Ground", lat: 12.9763, lon: 77.5929 },
+      { name: "Lalbagh Botanical Garden Ridge", lat: 12.9507, lon: 77.5848 },
+      { name: "IISc Campus Elevated Grounds", lat: 13.0219, lon: 77.5671 },
+      { name: "Indiranagar BDA Complex Area", lat: 12.9784, lon: 77.6408 }
+    ];
+
+    function getDemoAlerts() {
+      try {
+        return JSON.parse(localStorage.getItem("floodrisk_demo_alerts_v1") || "[]");
+      } catch (_) { return []; }
+    }
+
+    function saveDemoAlerts(list) {
+      localStorage.setItem("floodrisk_demo_alerts_v1", JSON.stringify(list));
+      const activeDemo = list.find(a => a.status === "ACTIVE" || a.status === "ACKNOWLEDGED");
+      if (activeDemo) {
+        localStorage.setItem("floodrisk_active_demo_alert", JSON.stringify(activeDemo));
+      } else {
+        localStorage.removeItem("floodrisk_active_demo_alert");
+      }
+    }
+
+    function highlightZoneOnMap(zoneName) {
+      if (!demoZoneLayer || !demoDestLayer) return;
+      demoZoneLayer.clearLayers();
+      demoDestLayer.clearLayers();
+      if (!zoneName || !BLR_ZONES[zoneName]) return;
+
+      Object.entries(BLR_ZONES).forEach(([zName, zInfo]) => {
+        const isAffected = zName === zoneName;
+        const color = isAffected ? "#dc2626" : "#d97706";
+        const rect = L.rectangle(zInfo.bounds, {
+          color: color, weight: isAffected ? 2.5 : 1.5, fillColor: color, fillOpacity: isAffected ? 0.25 : 0.08
+        }).addTo(demoZoneLayer);
+        rect.bindPopup(`<b>${zName}</b><br>Status: <b>${isAffected ? "AFFECTED ZONE (DEMO)" : "CAUTION ZONE"}</b>`);
+      });
+
+      DEMO_DESTINATIONS.forEach(d => {
+        L.circleMarker([d.lat, d.lon], {
+          radius: 7, color: "#fff", weight: 2, fillColor: "#16a34a", fillOpacity: 0.95
+        }).addTo(demoDestLayer).bindPopup(`<b>${d.name}</b><br><small>SUGGESTED DEMONSTRATION DESTINATION — VERIFY ACCESSIBILITY AND OFFICIAL GUIDANCE.</small>`);
+      });
+      map.fitBounds(BLR_ZONES[zoneName].bounds, { padding: [30, 30] });
+    }
+
+    function clearZoneHighlight() {
+      if (demoZoneLayer) demoZoneLayer.clearLayers();
+      if (demoDestLayer) demoDestLayer.clearLayers();
+    }
+
+    async function loadZoneMonitoring() {
+      const grid = document.getElementById("zoneCardsGrid");
+      if (!grid) return;
+      try {
+        const [wfRes, rfRes] = await Promise.all([
+          fetch("/api/weather/forecast"),
+          fetch("/api/risk/forecast?horizon=24&limit=1170")
+        ]);
+        const wf = wfRes.ok ? await wfRes.json() : {};
+        const rf = rfRes.ok ? await rfRes.json() : {};
+        const assessments = rf.assessments || [];
+        const demoAlerts = getDemoAlerts();
+        const activeDemo = demoAlerts.find(a => a.status === "ACTIVE" || a.status === "ACKNOWLEDGED");
+        const realAlerts = (window.__realAlertsCache || []).filter(a => a.lifecycle_state === "ACTIVE" || a.lifecycle_state === "ACKNOWLEDGED");
+
+        const fresh = wf.freshness || "UNAVAILABLE";
+        const fcTime = wf.retrieval_time_utc || "UNAVAILABLE";
+        const fcSource = `${wf.provider || "open_meteo"} / ${wf.model || "ecmwf_ifs025"} (0.25° ~27.8 km — not street-level)`;
+        const rain24 = (fresh === "LIVE" || fresh === "RECENT") && wf.next_24h_precipitation_mm != null
+          ? `${Number(wf.next_24h_precipitation_mm).toFixed(2)} mm / 24h (Approx. regional anchor)`
+          : "UNAVAILABLE";
+
+        const cardsHtml = Object.keys(BLR_ZONES).map(zName => {
+          const isDemoHit = activeDemo && activeDemo.zone === zName;
+          const zInfo = BLR_ZONES[zName];
+          // Summarize risk categories for cells in zone bounds if coordinates present, else domain summary
+          const catCounts = rf.category_counts || {};
+          const topCat = catCounts.CRITICAL ? "CRITICAL" : catCounts.HIGH ? "HIGH" : catCounts.MODERATE ? "MODERATE" : catCounts.ELEVATED ? "ELEVATED" : (fresh === "LIVE" || fresh === "RECENT" ? "LOW" : "INSUFFICIENT_DATA");
+          const zAlertStatus = isDemoHit
+            ? `<span class="state-badge state-active">DEMO ${activeDemo.severity}</span>`
+            : (realAlerts.length > 0 ? `<span class="state-badge state-ack">REAL ALERT (${realAlerts.length})</span>` : `<span class="state-badge state-resolved">NORMAL</span>`);
+          const cardCls = isDemoHit ? "zone-card zone-affected" : (activeDemo ? "zone-card zone-caution" : "zone-card");
+          return `
+            <div class="${cardCls}">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:12px;">${zName}</strong>
+                ${zAlertStatus}
+              </div>
+              <div style="color:var(--text-muted); line-height:1.55;">
+                <div><strong>Forecast Rain:</strong> <span style="color:var(--text-main);">${isDemoHit ? activeDemo.rainfall_label + " [DEMO]" : rain24}</span></div>
+                <div><strong>Availability:</strong> ${fresh} &nbsp;|&nbsp; <strong>Risk Class:</strong> ${topCat}</div>
+                <div><strong>Source:</strong> ${fcSource}</div>
+                <div><strong>Updated:</strong> <span style="font-family:var(--font-mono); font-size:10px;">${fcTime}</span></div>
+              </div>
+            </div>`;
+        }).join("");
+        grid.innerHTML = cardsHtml;
+      } catch (err) {
+        console.warn("Zone monitoring load error:", err);
+      }
+    }
+
+    function renderUnifiedAlertHistory() {
+      const tbody = document.getElementById("unifiedAlertHistoryTbody");
+      if (!tbody) return;
+      const demoList = getDemoAlerts();
+      const realList = (window.__realAlertsCache || []).map(a => ({
+        id: a.alert_id,
+        zone: (a.triggering_inputs && a.triggering_inputs.forecast_zone_id) || "Bengaluru Domain",
+        severity: a.severity,
+        rainfall_label: a.triggering_inputs && a.triggering_inputs.forecast_24h_mm != null ? `${a.triggering_inputs.forecast_24h_mm} mm / 24h` : "N/A",
+        timestamp: a.updated_at_utc || a.created_at_utc,
+        source: "REAL DATA",
+        status: a.lifecycle_state
+      }));
+
+      const combined = [...demoList, ...realList];
+      const openCount = combined.filter(x => x.status === "ACTIVE" || x.status === "ACKNOWLEDGED").length;
+      const cntEl = document.getElementById("floodCenterActiveCount");
+      if (cntEl) cntEl.innerText = String(openCount);
+
+      const facBadge = document.getElementById("facStatusBadge");
+      const viewCivBtn = document.getElementById("viewCivilianAlertBtn");
+      const activeDemo = demoList.find(a => a.status === "ACTIVE" || a.status === "ACKNOWLEDGED");
+      if (activeDemo) {
+        if (facBadge) { facBadge.innerText = `DEMO ALERT ACTIVE — ${activeDemo.zone.toUpperCase()}`; facBadge.className = "state-badge state-active"; }
+        if (viewCivBtn) viewCivBtn.style.display = "inline-flex";
+        highlightZoneOnMap(activeDemo.zone);
+      } else if (realList.some(a => a.status === "ACTIVE")) {
+        if (facBadge) { facBadge.innerText = "REAL DATA ALERT ACTIVE"; facBadge.className = "state-badge state-active"; }
+        if (viewCivBtn) viewCivBtn.style.display = "inline-flex";
+        clearZoneHighlight();
+      } else {
+        if (facBadge) { facBadge.innerText = "NORMAL MONITORING"; facBadge.className = "state-badge state-resolved"; }
+        if (viewCivBtn) viewCivBtn.style.display = "none";
+        clearZoneHighlight();
+      }
+
+      if (combined.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:10px;">No alerts recorded yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = combined.map(item => {
+        const isDemo = item.source === "DEMO";
+        const srcBadge = isDemo ? '<span class="chip chip-warning">DEMO</span>' : '<span class="chip chip-info">REAL DATA</span>';
+        const actions = isDemo
+          ? `${item.status === "ACTIVE" ? `<button class="action-btn-sm" onclick="ackDemoAlert('${item.id}')">Ack</button>` : ""}
+             ${item.status !== "RESOLVED" ? `<button class="action-btn-sm" onclick="resolveDemoAlert('${item.id}')">Resolve</button>` : ""}`
+          : `${item.status === "ACTIVE" ? `<button class="action-btn-sm" onclick="acknowledgeAlert('${item.id}')">Ack</button>` : ""}
+             ${item.status !== "RESOLVED" && item.status !== "EXPIRED" ? `<button class="action-btn-sm" onclick="resolveAlert('${item.id}')">Resolve</button>` : ""}`;
+        return `<tr>
+          <td style="font-family:var(--font-mono); font-size:10px;">${item.id}</td>
+          <td><strong>${item.zone}</strong></td>
+          <td><span class="sev-strip ${getSevClass(item.severity)}"></span>${item.severity}</td>
+          <td>${item.rainfall_label}</td>
+          <td style="font-family:var(--font-mono); font-size:10px;">${item.timestamp}</td>
+          <td>${srcBadge}</td>
+          <td><span class="state-badge ${getStateClass(item.status)}">${item.status}</span></td>
+          <td style="display:flex; gap:4px;">${actions}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function showDangerPopup(alertObj) {
+      const popup = document.getElementById("dangerAlertPopup");
+      if (!popup) return;
+      const isDemo = alertObj.source === "DEMO";
+      document.getElementById("dangerPopupSourceBadge").innerText = isDemo
+        ? "DEMONSTRATION ALERT — SIMULATED DATA — NOT A REAL EMERGENCY"
+        : "REAL DATA — V8 FORECAST ALERT";
+      document.getElementById("dangerPopupTitle").innerText = `HEAVY RAINFALL WARNING — ${alertObj.zone.toUpperCase()}`;
+      document.getElementById("dangerPopupBody").innerText =
+        `Zone: ${alertObj.zone} | Severity: ${alertObj.severity} | Scenario: ${alertObj.rainfall_label} | Time: ${alertObj.timestamp}`;
+      document.getElementById("popupAckBtn").onclick = () => {
+        if (isDemo) ackDemoAlert(alertObj.id);
+        else acknowledgeAlert(alertObj.id);
+        popup.classList.remove("open");
+      };
+      popup.classList.add("open");
+    }
+
+    window.ackDemoAlert = function(id) {
+      const list = getDemoAlerts().map(a => a.id === id ? { ...a, status: "ACKNOWLEDGED" } : a);
+      saveDemoAlerts(list);
+      loadZoneMonitoring();
+      renderUnifiedAlertHistory();
+    };
+
+    window.resolveDemoAlert = function(id) {
+      const list = getDemoAlerts().map(a => a.id === id ? { ...a, status: "RESOLVED" } : a);
+      saveDemoAlerts(list);
+      document.getElementById("dangerAlertPopup").classList.remove("open");
+      loadZoneMonitoring();
+      renderUnifiedAlertHistory();
+    };
+
+    function resetDemoAlerts() {
+      localStorage.removeItem("floodrisk_demo_alerts_v1");
+      localStorage.removeItem("floodrisk_active_demo_alert");
+      document.getElementById("dangerAlertPopup").classList.remove("open");
+      clearZoneHighlight();
+      loadZoneMonitoring();
+      renderUnifiedAlertHistory();
+    }
+
+    // Modal & Button Wiring
+    document.getElementById("autoAlertBtn").addEventListener("click", () => {
+      document.getElementById("autoAlertModal").classList.add("open");
+    });
+    document.getElementById("closeAutoAlertModalBtn").addEventListener("click", () => {
+      document.getElementById("autoAlertModal").classList.remove("open");
+    });
+    document.getElementById("dangerPopupCloseBtn").addEventListener("click", () => {
+      document.getElementById("dangerAlertPopup").classList.remove("open");
+    });
+    document.getElementById("facResetDemoBtn").addEventListener("click", resetDemoAlerts);
+    document.getElementById("modalResetDemoBtn").addEventListener("click", () => {
+      resetDemoAlerts();
+      document.getElementById("autoAlertModal").classList.remove("open");
+    });
+
+    document.getElementById("triggerDemoAlertBtn").addEventListener("click", () => {
+      const zone = document.getElementById("demoZoneSelect").value;
+      const rainMm = Number(document.getElementById("demoRainSelect").value);
+      const sevMap = { 10: "NORMAL", 20: "MODERATE", 35: "HIGH", 50: "SEVERE" };
+      const severity = sevMap[rainMm] || "SEVERE";
+      const demoAlert = {
+        id: `DEMO-${Date.now().toString().slice(-6)}`,
+        zone: zone,
+        severity: severity,
+        rainfall_mm_h: rainMm,
+        rainfall_label: `${rainMm} mm/hour — ${severity} (Simulated)`,
+        timestamp: new Date().toISOString(),
+        source: "DEMO",
+        status: "ACTIVE"
+      };
+      const existing = getDemoAlerts().map(a => a.status === "ACTIVE" ? { ...a, status: "RESOLVED" } : a);
+      saveDemoAlerts([demoAlert, ...existing]);
+      document.getElementById("autoAlertModal").classList.remove("open");
+      loadZoneMonitoring();
+      renderUnifiedAlertHistory();
+      showDangerPopup(demoAlert);
+    });
+
+    document.getElementById("runRealAlertEvalBtn").addEventListener("click", async () => {
+      const msgEl = document.getElementById("realEvalStatusMsg");
+      msgEl.innerText = "Evaluating live V8 forecast...";
+      try {
+        const res = await fetch("/api/alerts/evaluate", { method: "POST", headers: getAuthHeaders() });
+        if (!res.ok) {
+          msgEl.innerText = `Evaluation returned HTTP ${res.status} (check admin token if enabled).`;
+          return;
+        }
+        const data = await res.json();
+        const run = data.evaluation_run || {};
+        await loadAlerts();
+        if ((run.alerts_created || 0) > 0 || (run.alerts_updated || 0) > 0) {
+          msgEl.innerText = `Real-data evaluation completed: ${run.alerts_created} created, ${run.alerts_updated} updated.`;
+          const firstReal = (window.__realAlertsCache || []).find(a => a.lifecycle_state === "ACTIVE");
+          if (firstReal) {
+            showDangerPopup({
+              id: firstReal.alert_id,
+              zone: "Bengaluru Domain",
+              severity: firstReal.severity,
+              rainfall_label: "Real Forecast Threshold Crossed",
+              timestamp: firstReal.updated_at_utc,
+              source: "REAL DATA",
+              status: "ACTIVE"
+            });
+          }
+        } else {
+          msgEl.innerText = `Status: ${run.status || "COMPLETED"} — No real-data alert thresholds crossed (freshness=${run.forecast_freshness || "UNKNOWN"}).`;
+        }
+      } catch (e) {
+        msgEl.innerText = "Error running real-data evaluation.";
+      }
+    });
 
     function getAuthHeaders() {
       const headers = {'Content-Type': 'application/json'};

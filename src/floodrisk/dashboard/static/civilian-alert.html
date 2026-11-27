@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bengaluru Citizen Safety — Flood Alert &amp; Safe Routing</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --red-border: #fecaca;
+      --orange: #d97706;
+      --orange-bg: #fffbeb;
+      --green: #16a34a;
+      --green-bg: #f0fdf4;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .top-bar {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .status-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .pill-demo { background: #fef3c7; color: #92400e; }
+    .pill-real { background: #fee2e2; color: #991b1b; }
+    .pill-info { background: #dbeafe; color: #1e40af; }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 18px 16px 36px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .demo-banner {
+      background: var(--orange-bg);
+      border: 1px solid #fde68a;
+      border-left: 5px solid var(--orange);
+      color: #92400e;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .warning-card {
+      background: var(--red-bg);
+      border: 1px solid var(--red-border);
+      border-left: 6px solid var(--red);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .warning-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .warning-icon {
+      width: 32px;
+      height: 32px;
+      color: var(--red);
+      flex-shrink: 0;
+    }
+
+    .warning-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #991b1b;
+    }
+
+    .warning-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid var(--red-border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    .meta-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .meta-val { font-weight: 700; color: var(--text-main); }
+
+    .actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-outline { background: #fff; color: var(--text-main); border-color: var(--border); }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-sos {
+      background: var(--red);
+      color: #fff;
+      font-size: 15px;
+      padding: 11px 20px;
+    }
+    .btn-sos:hover { background: #b91c1c; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-main);
+    }
+
+    #civilianMap {
+      height: 420px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+    .dest-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .dest-btn {
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .dest-btn:hover, .dest-btn.active {
+      border-color: var(--green);
+      background: var(--green-bg);
+    }
+
+    .route-box {
+      background: var(--blue-bg);
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .route-warning {
+      background: var(--orange-bg);
+      border: 1px solid #fde68a;
+      color: #92400e;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .safety-list {
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .sos-box {
+      background: var(--red-bg);
+      border: 1px solid var(--red-border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      background: #fff;
+      border-radius: var(--radius);
+      max-width: 440px;
+      width: 100%;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.2" aria-hidden="true">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>Bengaluru Citizen Safety</span>
+    </div>
+    <div class="status-badges">
+      <span id="hdrAlertStatus" class="pill pill-real">ALERT ACTIVE</span>
+      <span id="hdrZone" class="pill pill-info">East Bengaluru</span>
+      <span id="hdrModeBadge" class="pill pill-demo">DEMONSTRATION</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="demoDisclaimerBanner" class="demo-banner">
+      DEMONSTRATION ALERT — SIMULATED DATA — NOT A REAL EMERGENCY. Do not treat this page as an official government evacuation order.
+    </div>
+
+    <section class="warning-card" aria-live="polite">
+      <div class="warning-header">
+        <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div>
+          <div id="warnTitle" class="warning-title">HEAVY RAINFALL WARNING — EAST BENGALURU</div>
+          <p id="warnMessage" style="margin-top:4px; color:#7f1d1d;">
+            HEAVY RAINFALL WARNING — EAST BENGALURU. Heavy rainfall conditions have crossed the configured demonstration threshold. Avoid low-lying roads, underpasses and waterlogged areas. Follow official emergency advisories.
+          </p>
+        </div>
+      </div>
+
+      <div class="warning-meta">
+        <div><div class="meta-label">Affected Zone</div><div id="metaZone" class="meta-val">East Bengaluru</div></div>
+        <div><div class="meta-label">Rainfall Info</div><div id="metaRain" class="meta-val">50 mm/hour (Simulated)</div></div>
+        <div><div class="meta-label">Alert Timestamp</div><div id="metaTime" class="meta-val">--</div></div>
+        <div><div class="meta-label">Data Source</div><div id="metaSource" class="meta-val">DEMO (Predefined Scenario)</div></div>
+      </div>
+
+      <div class="actions-bar">
+        <button id="copyLinkBtn" class="btn btn-primary" type="button">Copy Alert Link</button>
+        <button id="shareAlertBtn" class="btn btn-outline" type="button">Share Alert</button>
+        <a href="/" class="btn btn-outline">Authority Dashboard</a>
+        <span id="copyFeedback" style="font-size:12px; color:#166534; font-weight:600;"></span>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted);">
+        Note: Copying or sharing this fixed URL does not automatically notify residents.
+      </div>
+    </section>
+
+    <section class="sos-box">
+      <div>
+        <strong style="color:#991b1b; font-size:15px;">Emergency Assistance — India National Helpline 112</strong>
+        <div style="font-size:12px; color:#7f1d1d; margin-top:2px;">
+          Clicking SOS opens your device phone dialler (<code>tel:112</code>). On desktop browsers, dial <strong>112</strong> from a phone.
+          This app does not send GPS coordinates or dispatch rescue teams automatically.
+        </div>
+      </div>
+      <a id="sosBtn" href="tel:112" class="btn btn-sos">SOS — Call 112</a>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-title">Bengaluru Zone Map &amp; Indicative Safe-Destination Routing</div>
+        <div id="civilianMap"></div>
+        <div class="legend-row">
+          <span class="legend-item"><span class="swatch" style="background:#dc2626;"></span> Affected Zone</span>
+          <span class="legend-item"><span class="swatch" style="background:#d97706;"></span> Caution Zone</span>
+          <span class="legend-item"><span class="swatch" style="background:#16a34a;"></span> Suggested Demonstration Destination</span>
+          <span class="legend-item"><span class="swatch" style="background:#2563eb;"></span> Indicative Route (OSRM)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Suggested Demonstration Destinations</div>
+        <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+          SUGGESTED DEMONSTRATION DESTINATION — VERIFY ACCESSIBILITY AND OFFICIAL GUIDANCE.
+          These are public places for demonstration only, not verified official emergency shelters.
+        </p>
+        <div id="destList" class="dest-list"></div>
+
+        <div id="routeInfoBox" class="route-box">
+          <strong>Indicative Route:</strong> Select a destination to calculate an indicative route via OSRM.
+        </div>
+
+        <div class="route-warning">
+          ROUTES ARE INDICATIVE ONLY. VERIFY ROAD CONDITIONS AND FOLLOW OFFICIAL EMERGENCY INSTRUCTIONS.
+          Routing services do not necessarily know which roads are currently flooded or closed.
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Citizen Safety Instructions</div>
+      <ul class="safety-list">
+        <li>Avoid waterlogged roads and underpasses.</li>
+        <li>Stay away from exposed electrical infrastructure.</li>
+        <li>Avoid walking or driving through floodwater.</li>
+        <li>Move away from vulnerable low-lying areas if water levels are rising.</li>
+        <li>Follow official evacuation and emergency instructions.</li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- SOS Confirmation Modal -->
+  <div id="sosModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sosModalTitle">
+    <div class="modal-card">
+      <h3 id="sosModalTitle" style="color:#991b1b; margin-bottom:8px;">Emergency Call Confirmation (112)</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+        This will attempt to open your device's phone dialler for India's emergency number <strong>112</strong>.
+        On desktop browsers without calling support, please dial <strong>112</strong> directly on your phone.
+        This web application does <strong>not</strong> transmit your GPS coordinates or automatically contact emergency services.
+      </p>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button id="sosCancelBtn" class="btn btn-outline" type="button">Cancel</button>
+        <a id="sosConfirmLink" href="tel:112" class="btn btn-sos" style="font-size:13px; padding:9px 16px;">Open Dialler (112)</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const ZONES = {
+      "North Bengaluru": {
+        center: [13.075, 77.590],
+        bounds: [[13.01, 77.45], [13.15, 77.75]],
+        desc: "Yelahanka / Hebbal / Peenya sector"
+      },
+      "South Bengaluru": {
+        center: [12.905, 77.585],
+        bounds: [[12.85, 77.45], [12.96, 77.66]],
+        desc: "Jayanagar / JP Nagar / Electronic City corridor"
+      },
+      "East Bengaluru": {
+        center: [12.9698, 77.6900],
+        bounds: [[12.90, 77.64], [13.03, 77.75]],
+        desc: "Bellandur / Mahadevapura / Whitefield / Varthur sector"
+      },
+      "West Bengaluru": {
+        center: [12.970, 77.505],
+        bounds: [[12.90, 77.45], [13.02, 77.57]],
+        desc: "Rajajinagar / Vijayanagar / Kengeri sector"
+      }
+    };
+
+    const DESTINATIONS = [
+      {
+        id: "cubbon",
+        name: "Cubbon Park High Ground",
+        lat: 12.9763,
+        lon: 77.5929,
+        note: "SUGGESTED DEMONSTRATION DESTINATION — VERIFY ACCESSIBILITY AND OFFICIAL GUIDANCE."
+      },
+      {
+        id: "lalbagh",
+        name: "Lalbagh Botanical Garden Ridge",
+        lat: 12.9507,
+        lon: 77.5848,
+        note: "SUGGESTED DEMONSTRATION DESTINATION — VERIFY ACCESSIBILITY AND OFFICIAL GUIDANCE."
+      },
+      {
+        id: "iisc",
+        name: "IISc Campus Elevated Grounds",
+        lat: 13.0219,
+        lon: 77.5671,
+        note: "SUGGESTED DEMONSTRATION DESTINATION — VERIFY ACCESSIBILITY AND OFFICIAL GUIDANCE."
+      },
+      {
+        id: "indiranagar_bda",
+        name: "Indiranagar BDA Complex Area",
+        lat: 12.9784,
+        lon: 77.6408,
+        note: "SUGGESTED DEMONSTRATION DESTINATION — VERIFY ACCESSIBILITY AND OFFICIAL GUIDANCE."
+      }
+    ];
+
+    function loadActiveScenario() {
+      // Predefined East Bengaluru demonstration scenario (works independently in a fresh browser)
+      const fallback = {
+        id: "DEMO-EAST-DEFAULT",
+        zone: "East Bengaluru",
+        severity: "SEVERE",
+        rainfall_mm_h: 50,
+        rainfall_label: "50 mm/hour — Severe (Simulated Demonstration)",
+        timestamp: new Date().toISOString(),
+        source: "DEMO",
+        status: "ACTIVE"
+      };
+      try {
+        const raw = localStorage.getItem("floodrisk_active_demo_alert");
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.zone && ZONES[parsed.zone]) return parsed;
+      } catch (_) {}
+      return fallback;
+    }
+
+    const scenario = loadActiveScenario();
+    const isDemo = scenario.source !== "REAL DATA";
+
+    document.getElementById("hdrZone").innerText = scenario.zone;
+    document.getElementById("hdrAlertStatus").innerText = `${scenario.severity || "SEVERE"} ALERT`;
+    document.getElementById("hdrModeBadge").innerText = isDemo ? "DEMONSTRATION" : "REAL DATA";
+    document.getElementById("hdrModeBadge").className = "pill " + (isDemo ? "pill-demo" : "pill-real");
+
+    document.getElementById("demoDisclaimerBanner").style.display = isDemo ? "block" : "none";
+    document.getElementById("warnTitle").innerText = `HEAVY RAINFALL WARNING — ${scenario.zone.toUpperCase()}`;
+    document.getElementById("warnMessage").innerText = isDemo
+      ? `HEAVY RAINFALL WARNING — ${scenario.zone.toUpperCase()}. Heavy rainfall conditions have crossed the configured demonstration threshold. Avoid low-lying roads, underpasses and waterlogged areas. Follow official emergency advisories.`
+      : `FLOOD RISK ADVISORY — ${scenario.zone.toUpperCase()}. Available forecast data crossed configured provisional threshold. Avoid low-lying roads and underpasses.`;
+
+    document.getElementById("metaZone").innerText = scenario.zone;
+    document.getElementById("metaRain").innerText = scenario.rainfall_label || `${scenario.rainfall_mm_h} mm/h`;
+    document.getElementById("metaTime").innerText = scenario.timestamp;
+    document.getElementById("metaSource").innerText = isDemo
+      ? "DEMO — SIMULATED DATA (Not a Real Emergency)"
+      : "REAL DATA — V8 Operational Forecast";
+
+    // Fixed reusable public URL
+    const fixedUrl = window.location.origin + "/civilian-alert.html";
+
+    function copyTextFallback(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+
+    async function handleCopy() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(fixedUrl);
+        } else {
+          copyTextFallback(fixedUrl);
+        }
+      } catch (_) {
+        copyTextFallback(fixedUrl);
+      }
+      document.getElementById("copyFeedback").innerText = "Alert link copied (" + fixedUrl + ")";
+    }
+
+    document.getElementById("copyLinkBtn").addEventListener("click", handleCopy);
+    document.getElementById("shareAlertBtn").addEventListener("click", async () => {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "Bengaluru Citizen Safety — Flood Alert",
+            text: document.getElementById("warnTitle").innerText,
+            url: fixedUrl
+          });
+          return;
+        } catch (_) {}
+      }
+      await handleCopy();
+    });
+
+    // SOS confirmation modal
+    const sosModal = document.getElementById("sosModal");
+    document.getElementById("sosBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      sosModal.classList.add("open");
+    });
+    document.getElementById("sosCancelBtn").addEventListener("click", () => {
+      sosModal.classList.remove("open");
+    });
+
+    // Leaflet + OpenStreetMap
+    const map = L.map("civilianMap", { center: [12.9716, 77.5946], zoom: 11 });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    Object.entries(ZONES).forEach(([zName, zInfo]) => {
+      const isAffected = zName === scenario.zone;
+      const color = isAffected ? "#dc2626" : "#d97706";
+      const rect = L.rectangle(zInfo.bounds, {
+        color: color,
+        weight: isAffected ? 2.5 : 1.5,
+        fillColor: color,
+        fillOpacity: isAffected ? 0.28 : 0.10
+      }).addTo(map);
+      rect.bindPopup(`<b>${zName}</b><br>${zInfo.desc}<br>Status: <b>${isAffected ? "AFFECTED ZONE" : "CAUTION ZONE"}</b>`);
+    });
+
+    const originCoords = ZONES[scenario.zone].center;
+    L.circleMarker(originCoords, {
+      radius: 8, color: "#fff", weight: 2, fillColor: "#dc2626", fillOpacity: 0.95
+    }).addTo(map).bindPopup(`<b>Origin: ${scenario.zone}</b><br>Affected Zone Reference`);
+
+    let routeLine = null;
+    const destListEl = document.getElementById("destList");
+
+    DESTINATIONS.forEach((d, idx) => {
+      const marker = L.circleMarker([d.lat, d.lon], {
+        radius: 8, color: "#fff", weight: 2, fillColor: "#16a34a", fillOpacity: 0.95
+      }).addTo(map);
+      marker.bindPopup(`<b>${d.name}</b><br><small>${d.note}</small>`);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "dest-btn" + (idx === 0 ? " active" : "");
+      btn.innerHTML = `<div style="font-weight:700; color:#166534;">${d.name}</div><div style="font-size:10px; color:#475569;">${d.note}</div>`;
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".dest-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        calculateIndicativeRoute(d);
+      });
+      destListEl.appendChild(btn);
+    });
+
+    async function calculateIndicativeRoute(dest) {
+      const box = document.getElementById("routeInfoBox");
+      const osmUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${originCoords[0]}%2C${originCoords[1]}%3B${dest.lat}%2C${dest.lon}`;
+      box.innerHTML = `<strong>Origin:</strong> ${scenario.zone} &rarr; <strong>Destination:</strong> ${dest.name}<br>Calculating indicative route via OSRM...`;
+
+      if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+      }
+
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originCoords[1]},${originCoords[0]};${dest.lon},${dest.lat}?overview=full&geometries=geojson`;
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(osrmUrl, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const route = data.routes && data.routes[0];
+        if (!route || !route.geometry) throw new Error("No route returned");
+
+        const latlngs = route.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+        routeLine = L.polyline(latlngs, { color: "#2563eb", weight: 4, opacity: 0.85 }).addTo(map);
+        map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+        const distKm = (route.distance / 1000).toFixed(2);
+        const durMin = Math.round(route.duration / 60);
+        box.innerHTML = `
+          <strong>Origin:</strong> ${scenario.zone} &rarr; <strong>Destination:</strong> ${dest.name}<br>
+          <strong>Indicative Distance:</strong> ${distKm} km &nbsp;|&nbsp; <strong>Est. Travel Time:</strong> ~${durMin} min<br>
+          <a href="${osmUrl}" target="_blank" rel="noopener">Open in OpenStreetMap Directions</a>`;
+      } catch (_) {
+        box.innerHTML = `
+          <strong>Origin:</strong> ${scenario.zone} &rarr; <strong>Destination:</strong> ${dest.name}<br>
+          <span style="color:#b45309; font-weight:700;">Route calculation is temporarily unavailable.</span> Destination marker remains shown on the map.<br>
+          <a href="${osmUrl}" target="_blank" rel="noopener">Try OpenStreetMap Directions</a>`;
+      }
+    }
+
+    // Calculate indicative route for first destination on load
+    calculateIndicativeRoute(DESTINATIONS[0]);
+  </script>
+</body>
+</html>
