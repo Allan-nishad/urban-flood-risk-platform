@@ -1,0 +1,28 @@
+{
+  "access_timestamp_utc": "2026-11-27T04:49:08Z",
+  "p2_4_incident_rows": 21,
+  "p6_incident_rows": 24,
+  "p6_positive_rows": 17,
+  "p6_monitored_dry_rows": 7,
+  "overlapping_grid_ids_p2_p6": [
+    "g1000_7489_1636",
+    "g1000_7489_1650",
+    "g1000_7495_1633",
+    "g1000_7495_1635",
+    "g1000_7495_1637"
+  ],
+  "overlapping_grid_id_count": 5,
+  "independent_episodes_total": 8,
+  "confirmed_episodes": 3,
+  "corroborated_episodes": 4,
+  "reported_episodes": 1,
+  "monitored_dry_control_grid_ids": [
+    "g1000_7479_1648",
+    "g1000_7481_1643",
+    "g1000_7482_1636",
+    "g1000_7484_1637",
+    "g1000_7485_1641",
+    "g1000_7486_1641",
+    "g1000_7489_1642"
+  ]
+}

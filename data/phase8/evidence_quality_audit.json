@@ -1,0 +1,29 @@
+{
+  "1_independent_events_identified": 8,
+  "2_confirmed_events": 3,
+  "3_corroborated_events": 4,
+  "4_reported_unverified_events": 1,
+  "5_distinct_affected_grid_cells_positive": 29,
+  "6_confirmed_or_corroborated_flood_positive_records": 34,
+  "7_verified_negative_records": 0,
+  "8_proxy_negative_records": 14,
+  "9_unknown_or_unobserved_records": 9312,
+  "10_temporal_coverage_years": [
+    "2020",
+    "2022",
+    "2023",
+    "2024",
+    "2025"
+  ],
+  "11_spatial_domain_cells_per_event": 1170,
+  "12_satellite_scenes_catalogued": 9,
+  "13_historical_rainfall_episodes_covered": 8,
+  "14_sar_missing_rate_pct": 99.79,
+  "15_duplicate_p2_p6_grid_ids_merged": 5,
+  "ml_validation_readiness": {
+    "events_with_positive_labels": 7,
+    "events_with_negative_labels": 2,
+    "loeo_feasible": false,
+    "assessment": "Expanded from 1 to 7 flood-positive episodes, but only 2 episode(s) have verified/proxy non-flood control cells. Multi-event non-flood control expansion across 2020-2025 is required before robust LOEO supervised training."
+  }
+}
