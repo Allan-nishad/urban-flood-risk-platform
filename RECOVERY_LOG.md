@@ -21,3 +21,9 @@
 - **Files Changed:** `src/floodrisk/dashboard/static/index.html`, `tests/test_server.py`.
 - **Before Evidence:** `pytest tests/test_server.py::test_frontend_html_integration_and_no_duplicates` -> FAILED (`assert 5 == 1`).
 - **After Evidence:** `pytest tests/test_server.py` -> 9 passed; headless Edge DOM verification confirmed 24 Phase 6 incident rows, 73 Phase 7 manifest rows, `STALE` badge, and real KPI values (`0 Cells` heavy rain, `6.10 mm` max 24h); screenshot saved to `C:\Users\allan\AppData\Local\Temp\audit_20261127_092600\dashboard_headless.png`.
+
+## Defect 4: `SAR-METRIC-AND-TIER4` (Tier 4 — SAR 76.9% Overclaim Repair, Data Integrity & Playwright Tests)
+- **Root Cause:** `server.py:351` and `index.html` Stage 6D card prominently displayed `76.9% Sensitivity` (`10/13`), which Phase 7 (`phase7_sar_evidence_comparison.parquet`) revealed included `4/13` pre-existing permanent-lake conflations and `1/13` unvalidated double-bounce; true specular flood expansion detection is `5/13 (38.5%)`. Additionally, `tests/` lacked `test_data_integrity.py` and interactive browser tests.
+- **Files Changed:** `src/floodrisk/dashboard/server.py`, `src/floodrisk/dashboard/static/index.html`, `tests/test_data_integrity.py` (new), `tests/test_server.py`.
+- **Before Evidence:** `p6SarVal` displayed `76.9% Sensitivity`; 0 data integrity or Playwright tests.
+- **After Evidence:** `p6SarVal` displays `5/13 True Specular (38.5%)` with `EXPLORATORY_UNVALIDATED` status and lake-conflation breakdown; `pytest tests/test_data_integrity.py tests/test_server.py -v` -> `20 passed in 15.34s` (including Playwright Edge desktop/mobile interactive test).

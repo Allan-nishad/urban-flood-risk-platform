@@ -1687,8 +1687,11 @@
             }
             if (p6sarRes.ok) {
               const p6sar = await p6sarRes.json();
-              document.getElementById('p6SarVal').innerText = `${p6sar.sensitivity_on_open_flooding_pct ?? '--'}% Sensitivity`;
-              document.getElementById('p6SarDesc').innerText = `${p6sar.co_event_acquisition_utc || ''}. Specificity: ${p6sar.specificity_on_monitored_dry_pct ?? '--'}%.`;
+              const specDet = p6sar.true_specular_detections ?? '--';
+              const posTot = p6sar.verified_positive_total ?? '--';
+              const specPct = p6sar.true_specular_sensitivity_pct ?? '--';
+              document.getElementById('p6SarVal').innerText = `${specDet}/${posTot} True Specular (${specPct}%)`;
+              document.getElementById('p6SarDesc').innerText = `Exploratory (${p6sar.sar_metric_status || 'UNVALIDATED'}): ${p6sar.lake_conflated_count ?? '--'} lake-conflated, ${p6sar.urban_canyon_missed_count ?? '--'} canyon-missed; dry specificity ${p6sar.specificity_on_monitored_dry_pct ?? '--'}%.`;
             }
             if (p6hydRes.ok) {
               const p6hyd = await p6hydRes.json();

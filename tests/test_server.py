@@ -158,3 +158,100 @@ def test_frontend_html_integration_and_no_duplicates():
     assert "STALE" in html
 
 
+def test_all_registered_routes_inventory_and_valid_json(live_server_url):
+    import re
+    server_src = Path("src/floodrisk/dashboard/server.py").read_text(encoding="utf-8")
+    routes = sorted(set(re.findall(r'clean_path\s*==\s*[\'"](/api/[^\'"]+)[\'"]', server_src)))
+    assert len(routes) >= 20
+
+    for route in routes:
+        sc, hdrs, body = _http_req(f"{live_server_url}{route}")
+        assert sc == 200, f"{route} returned {sc}"
+        assert "application/json" in hdrs.get("Content-Type", "")
+        assert isinstance(body, (dict, list)) and len(body) > 0, f"{route} returned empty payload"
+
+
+def test_sar_metric_review_exposes_audited_breakdown(live_server_url):
+    sc, _, sar = _http_req(f"{live_server_url}/api/phase6/sar")
+    assert sc == 200
+    assert sar["verified_positive_total"] == 13
+    assert sar["true_specular_detections"] == 5
+    assert sar["true_specular_sensitivity_pct"] == 38.5
+    assert sar["lake_conflated_count"] == 4
+    assert sar["sar_metric_status"] == "EXPLORATORY_UNVALIDATED"
+
+
+def test_datastore_missing_and_empty_data_behavior(tmp_path):
+    from floodrisk.dashboard.server import DashboardDataStore
+
+    ds = DashboardDataStore(data_dir=tmp_path, reports_dir=tmp_path)
+    assert ds.cells_geojson == {}
+    assert ds.incidents == []
+    assert ds.episodes == []
+    assert ds.phase7_manifest["status"] == "UNAVAILABLE"
+    assert ds.summary["study_area"]["total_cells"] == 0
+
+
+def test_playwright_interactive_dashboard(live_server_url):
+    from playwright.sync_api import sync_playwright
+
+    edge_path = Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
+    if not edge_path.is_file():
+        pytest.skip("Microsoft Edge binary not installed")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=str(edge_path), headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+
+        page_errors = []
+        failed_api = []
+        page.on("pageerror", lambda err: page_errors.append(str(err)))
+        page.on("response", lambda resp: failed_api.append((resp.url, resp.status)) if "/api/" in resp.url and resp.status >= 400 else None)
+
+        page.goto(live_server_url, wait_until="networkidle")
+        page.wait_for_function("document.getElementById('kpiTotalCells').innerText.includes('1,170')")
+
+        # 1. Verify initial KPIs & SAR honest metric
+        assert page.inner_text("#kpiHeavyRain") == "0 Cells"
+        assert page.inner_text("#kpiMax24h") == "6.10 mm"
+        assert "STALE" in page.inner_text("#inspObsStateBadge")
+        assert page.inner_text("#p6SarVal") == "5/13 True Specular (38.5%)"
+
+        # 2. Switch every top-right panel tab
+        for tab in ["forecastTab", "incidentsTab", "inspectorTab"]:
+            page.click(f'button[data-tab="{tab}"]')
+            assert page.is_visible(f"#{tab}")
+
+        # 3. Switch every bottom analytics tab & verify Phase 6 (24 rows) + Phase 7 manifest (73 rows)
+        for btab in ["manifestTableTab", "devSarTab", "phase5Tab", "phase6Tab", "episodesTableTab"]:
+            page.click(f'button[data-bottom-tab="{btab}"]')
+            assert page.is_visible(f"#{btab}")
+
+        page.click('button[data-bottom-tab="phase6Tab"]')
+        assert page.locator("#phase6GroundTruthTbody tr").count() == 24
+        assert page.locator("#phase7ManifestTbody tr").count() == 73
+
+        # 4. Click a grid cell polygon on the Leaflet map and verify cell inspector updates
+        first_id = page.inner_text("#inspCellId")
+        polygons = page.locator("svg.leaflet-zoom-animated path.leaflet-interactive")
+        assert polygons.count() > 100
+        polygons.nth(10).click(force=True)
+        assert len(page.inner_text("#inspCellId")) > 0 and page.inner_text("#inspCellId") != "Loading..."
+
+        # 5. Mobile viewport check (375x812)
+        page.set_viewport_size({"width": 375, "height": 812})
+        assert page.is_visible("#map")
+        assert len(page_errors) == 0, f"JS page errors: {page_errors}"
+        assert len(failed_api) == 0, f"Failed API requests: {failed_api}"
+
+        # 6. Simulate API failure and verify #apiErrorBanner becomes visible
+        err_page = browser.new_page()
+        err_page.route("**/api/cells", lambda route: route.abort())
+        err_page.goto(live_server_url, wait_until="domcontentloaded")
+        err_page.wait_for_selector("#apiErrorBanner", state="visible", timeout=5000)
+        assert "API_ERROR" in err_page.inner_text("#apiErrorBanner")
+
+        browser.close()
+
+
+

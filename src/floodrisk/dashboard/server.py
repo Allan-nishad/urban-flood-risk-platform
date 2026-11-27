@@ -351,11 +351,21 @@ class DashboardDataStore:
         p6_sar_reg_path = Path("data/processed/phase6/sar/sar_scene_audit_registry.parquet")
         p6_sar_feat_path = Path("data/processed/phase6/sar/sar_flood_signature_features.parquet")
         p6_sar_xval_path = Path("data/processed/phase6/sar/sar_ground_truth_cross_validation.parquet")
+        p7_sar_comp_path = Path("data/processed/phase7/sar_validation/phase7_sar_evidence_comparison.parquet")
         if p6_sar_reg_path.is_file() and p6_sar_feat_path.is_file() and p6_sar_xval_path.is_file():
             try:
                 df_sreg = pd.read_parquet(p6_sar_reg_path)
                 df_sfeat = pd.read_parquet(p6_sar_feat_path)
                 df_sxval = pd.read_parquet(p6_sar_xval_path)
+                true_spec = None
+                lake_conf = None
+                canyon_miss = None
+                pos_total = int((df_sxval["observation_status"] == "VERIFIED_POSITIVE").sum()) if "observation_status" in df_sxval.columns else 13
+                if p7_sar_comp_path.is_file():
+                    df_p7s = pd.read_parquet(p7_sar_comp_path)
+                    true_spec = int(df_p7s["is_true_specular_flood_detection"].sum())
+                    lake_conf = int(df_p7s["is_conflated_with_permanent_lake"].sum())
+                    canyon_miss = int(df_p7s["is_missed_due_to_urban_canyon"].sum())
                 self.phase6_sar = {
                     "satellite": "Sentinel-1A C-SAR (5.405 GHz)",
                     "beam_mode": "IW GRDH (Orbit 165 Descending)",
@@ -363,9 +373,15 @@ class DashboardDataStore:
                     "co_event_acquisition_utc": "2022-09-05T00:46:16Z (06:16 AM IST)",
                     "physical_class_breakdown": df_sfeat["sar_physical_inundation_class"].value_counts().to_dict(),
                     "ground_truth_cross_validation": df_sxval["validation_agreement"].value_counts().to_dict(),
-                    "sensitivity_on_open_flooding_pct": 76.9,
+                    "verified_positive_total": pos_total,
+                    "true_specular_detections": true_spec,
+                    "true_specular_sensitivity_pct": round(true_spec / pos_total * 100.0, 1) if true_spec is not None and pos_total else None,
+                    "lake_conflated_count": lake_conf,
+                    "urban_canyon_missed_count": canyon_miss,
+                    "exploratory_combined_agreement_pct": 76.9,
                     "specificity_on_monitored_dry_pct": 85.7,
-                    "urban_radar_limitation": "Narrow street canyons and dense tree canopy attenuate C-band radar pulses, while building corner-reflection produces double-bounce."
+                    "sar_metric_status": "EXPLORATORY_UNVALIDATED",
+                    "urban_radar_limitation": "Phase 7 audit found 4/13 positives were pre-existing lake conflation and 1/13 double-bounce; true specular flood expansion sensitivity is 5/13 (38.5%), not 76.9%."
                 }
             except Exception as e:
                 logger.warning(f"Error loading Phase 6 SAR features: {e}")
