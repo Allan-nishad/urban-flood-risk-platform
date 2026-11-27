@@ -57,9 +57,15 @@ class DashboardDataStore:
             db_p = self.data_dir / "floodrisk_v8.db"
         else:
             db_p = Path("data/state/floodrisk_v8.db")
+        from ..alerts import AlertStore, OperationalAlertEngine
         from ..live import LiveWeatherRefresher, LiveWeatherStore
         self.weather_store = LiveWeatherStore(db_p)
-        self.refresher = LiveWeatherRefresher(self.weather_store)
+        self.alert_store = AlertStore(db_p)
+        self.alert_engine = OperationalAlertEngine(self.alert_store)
+        self.refresher = LiveWeatherRefresher(
+            self.weather_store,
+            on_refresh_success=lambda _res: self.evaluate_alerts(),
+        )
         self.summary: Dict[str, Any] = {}
         self.cells_geojson: Dict[str, Any] = {}
         self.incidents: List[Dict[str, Any]] = []
@@ -80,6 +86,8 @@ class DashboardDataStore:
         self.phase7_uncertainty: Dict[str, Any] = {}
         self.phase7_manifest: Dict[str, Any] = {}
         self.load_data()
+        if self.cells_geojson.get("features"):
+            self.evaluate_alerts()
 
     def load_data(self):
         """Load datasets from disk and construct API payloads."""
@@ -769,6 +777,41 @@ class DashboardDataStore:
         }
         return inf.predict_records([rec])
 
+    def evaluate_alerts(self) -> Dict[str, Any]:
+        """Evaluate all loaded grid cells against current stored forecast & observed state."""
+        cells = [
+            {
+                **f.get("properties", {}),
+                "latitude": f.get("properties", {}).get("centroid_lat"),
+                "longitude": f.get("properties", {}).get("centroid_lon"),
+            }
+            for f in self.cells_geojson.get("features", [])
+            if f.get("properties", {}).get("grid_id")
+        ]
+        fc = self.get_weather_forecast_payload()
+        obs = self.get_weather_current_payload()
+        return self.alert_engine.evaluate(cells=cells, forecast_payload=fc, observed_payload=obs)
+
+    def get_alerts_payload(
+        self,
+        lifecycle_state: Optional[str] = None,
+        grid_id: Optional[str] = None,
+        limit: int = 200,
+    ) -> Dict[str, Any]:
+        alerts = self.alert_store.list_alerts(lifecycle_state=lifecycle_state, grid_id=grid_id, limit=limit)
+        return {
+            "status": "AVAILABLE",
+            "public_dispatch_enabled": self.alert_engine.public_dispatch_enabled,
+            "count": len(alerts),
+            "alerts": alerts,
+        }
+
+    def get_alerts_summary_payload(self) -> Dict[str, Any]:
+        return self.alert_engine.get_summary()
+
+    def get_alert_detail_payload(self, alert_id: str) -> Optional[Dict[str, Any]]:
+        return self.alert_store.get_alert(alert_id)
+
 
 _GLOBAL_DATASTORE: Optional[DashboardDataStore] = None
 
@@ -805,6 +848,8 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         if clean_path.startswith("/api/"):
             if clean_path in ("/api/cells", "/api/ml/experimental"):
                 allowed_params = {"grid_id"}
+            elif clean_path == "/api/alerts":
+                allowed_params = {"state", "grid_id", "limit"}
             else:
                 allowed_params = set()
             unknown_params = set(params.keys()) - allowed_params
@@ -920,6 +965,50 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                 return
             self._send_json(self.datastore.get_ml_experimental_payload())
             return
+        elif clean_path == "/api/alerts":
+            state_param = params.get("state", [None])[0]
+            if state_param is not None:
+                state_param = state_param.strip().upper()
+                from ..alerts import LIFECYCLE_STATES
+                if state_param not in LIFECYCLE_STATES:
+                    self._send_error_json(
+                        400,
+                        "INVALID_PARAMETER",
+                        "Invalid alert state",
+                        f"state must be one of {list(LIFECYCLE_STATES)}",
+                    )
+                    return
+            grid_param = params.get("grid_id", [None])[0]
+            if grid_param is not None:
+                grid_param = grid_param.strip()
+                if not grid_param:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid query parameter", "grid_id cannot be empty")
+                    return
+            limit_val = 200
+            if "limit" in params:
+                try:
+                    limit_val = int(params["limit"][0])
+                    if limit_val < 1 or limit_val > 1000:
+                        raise ValueError("out of range")
+                except ValueError:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid limit", "limit must be an integer between 1 and 1000")
+                    return
+            self._send_json(self.datastore.get_alerts_payload(lifecycle_state=state_param, grid_id=grid_param, limit=limit_val))
+            return
+        elif clean_path == "/api/alerts/summary":
+            self._send_json(self.datastore.get_alerts_summary_payload())
+            return
+        elif clean_path.startswith("/api/alerts/") and clean_path.count("/") == 3:
+            alert_id = clean_path.split("/")[3].strip()
+            if not alert_id:
+                self._send_error_json(400, "INVALID_PARAMETER", "Invalid alert ID", "alert_id cannot be empty")
+                return
+            alert = self.datastore.get_alert_detail_payload(alert_id)
+            if alert is None:
+                self._send_error_json(404, "ALERT_NOT_FOUND", "Alert not found", f"No alert found for id='{alert_id}'")
+                return
+            self._send_json(alert)
+            return
         elif clean_path.startswith("/api/"):
             self._send_error_json(404, "ENDPOINT_NOT_FOUND", "Endpoint not found", f"No route registered for '{clean_path}'")
             return
@@ -951,7 +1040,57 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             f"HTTP {method} is not supported on '{self.path.split('?')[0]}'; use GET.",
         )
 
+    def _read_json_body(self) -> Dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length <= 0:
+            return {}
+        raw = self.rfile.read(length).decode("utf-8", errors="replace")
+        if not raw.strip():
+            return {}
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise ValueError("JSON body must be an object")
+        return data
+
     def do_POST(self):
+        from ..alerts import AlertNotFoundError, InvalidLifecycleTransitionError
+        clean_path = urlparse(self.path).path
+        parts = [p for p in clean_path.split("/") if p]
+        # Supported POST endpoints:
+        #   /api/alerts/evaluate
+        #   /api/alerts/{id}/acknowledge
+        #   /api/alerts/{id}/resolve
+        if parts == ["api", "alerts", "evaluate"]:
+            run_rec = self.datastore.evaluate_alerts()
+            self._send_json({"status": "OK", "evaluation_run": run_rec})
+            return
+
+        if len(parts) == 4 and parts[0] == "api" and parts[1] == "alerts" and parts[3] in ("acknowledge", "resolve"):
+            alert_id = parts[2]
+            action = parts[3]
+            try:
+                body = self._read_json_body()
+            except Exception as e:
+                self._send_error_json(400, "INVALID_JSON", "Invalid JSON request body", str(e))
+                return
+            actor = str(body.get("actor", "operator")).strip() or "operator"
+            note = body.get("note")
+            if note is not None:
+                note = str(note)
+            try:
+                if action == "acknowledge":
+                    updated = self.datastore.alert_engine.acknowledge_alert(alert_id, actor=actor, note=note)
+                else:
+                    updated = self.datastore.alert_engine.resolve_alert(alert_id, actor=actor, note=note)
+                self._send_json({"status": "OK", "alert": updated})
+                return
+            except AlertNotFoundError as e:
+                self._send_error_json(404, "ALERT_NOT_FOUND", "Alert not found", str(e))
+                return
+            except InvalidLifecycleTransitionError as e:
+                self._send_error_json(409, "INVALID_TRANSITION", "Invalid alert lifecycle transition", str(e))
+                return
+
         self._method_not_allowed("POST")
 
     def do_PUT(self):
@@ -966,7 +1105,8 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def _send_json(self, data: Any, status: int = 200):
@@ -975,7 +1115,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
         self.wfile.write(body)
 

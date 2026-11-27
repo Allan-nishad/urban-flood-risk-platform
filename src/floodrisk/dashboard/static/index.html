@@ -667,6 +667,64 @@
         <button class="tab-btn" data-bottom-tab="devSarTab" style="color:#b91c1c;">Testing & Dev Fixtures (Quarantined SAR)</button>
         <button class="tab-btn" data-bottom-tab="phase5Tab" style="color:#0284c7; font-weight:700;">Phase 5: Scientific Validation & Readiness Gates</button>
         <button class="tab-btn" data-bottom-tab="phase6Tab" style="color:#16a34a; font-weight:700;">Phase 6: Genuine Meteorology, SAR & Hydrology</button>
+        <button class="tab-btn" data-bottom-tab="alertsTab" style="color:#b45309; font-weight:700;">Operational Alerts (Research-Only) <span id="alertTabCount" class="badge badge-info">0</span></button>
+      </div>
+
+      <!-- Operational Alerts (Research-Only) Tab -->
+      <div id="alertsTab" class="data-table-container" style="display:none; padding:16px;">
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; padding:12px 16px; border-radius:6px; margin-bottom:14px;">
+          <strong style="color:#991b1b; font-size:12px; text-transform:uppercase;">INTERNAL RESEARCH-ONLY CANDIDATE ALERTS — NOT A PUBLIC EMERGENCY WARNING</strong>
+          <div style="font-size:12px; color:#7f1d1d; margin-top:4px;">
+            Public emergency notifications are <strong>DISABLED</strong>. Rules use provisional uncalibrated thresholds; Stage 3 ML scores are <code>EXPERIMENTAL_UNVALIDATED</code> supporting info only and never trigger operational warnings. Missing/stale data is never treated as safe.
+          </div>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px;">
+          <div>
+            <strong>Summary:</strong>
+            <span id="alertSummaryStats">Loading...</span> |
+            Latest Run: <code id="alertLatestRun">--</code> |
+            Public Dispatch: <span class="badge" style="background:#fee2e2; color:#991b1b;">DISABLED</span>
+          </div>
+          <button id="evalAlertsNowBtn" onclick="evaluateAlertsNow()" style="padding:6px 12px; font-size:12px; font-weight:600; background:#0f172a; color:#fff; border:none; border-radius:4px; cursor:pointer;">Re-evaluate Alerts</button>
+        </div>
+
+        <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Active &amp; Acknowledged Candidate Alerts</h4>
+        <table class="data-table" style="margin-bottom:18px;">
+          <thead>
+            <tr>
+              <th>Alert ID</th>
+              <th>Severity</th>
+              <th>Grid &amp; Location</th>
+              <th>Rule &amp; Triggering Reason</th>
+              <th>Source &amp; Freshness</th>
+              <th>Qualification</th>
+              <th>Created / Updated</th>
+              <th>State &amp; Actions</th>
+            </tr>
+          </thead>
+          <tbody id="activeAlertsTbody">
+            <tr><td colspan="8" style="text-align:center; color:#64748b;">Loading alerts...</td></tr>
+          </tbody>
+        </table>
+
+        <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Alert History (Resolved &amp; Expired)</h4>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Alert ID</th>
+              <th>Severity</th>
+              <th>Grid ID</th>
+              <th>Rule</th>
+              <th>Qualification</th>
+              <th>Updated / Resolution</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody id="historyAlertsTbody">
+            <tr><td colspan="7" style="text-align:center; color:#64748b;">Loading alert history...</td></tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- Episodes Log Table -->
@@ -1836,6 +1894,8 @@
             console.warn("Experimental ML status load error:", mlerr);
           }
 
+          await loadAlerts();
+
       } catch (err) {
         console.error("Error loading dashboard data:", err);
         showApiError(err.message || "Failed to fetch dashboard data from backend.");
@@ -1871,16 +1931,103 @@
     // Bottom Tabs
     document.querySelectorAll('[data-bottom-tab]').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const target = e.target.getAttribute('data-bottom-tab');
+        const target = btn.getAttribute('data-bottom-tab');
         document.querySelectorAll('[data-bottom-tab]').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
+        btn.classList.add('active');
         document.getElementById('episodesTableTab').style.display = target === 'episodesTableTab' ? 'block' : 'none';
         document.getElementById('manifestTableTab').style.display = target === 'manifestTableTab' ? 'block' : 'none';
         document.getElementById('devSarTab').style.display = target === 'devSarTab' ? 'block' : 'none';
         document.getElementById('phase5Tab').style.display = target === 'phase5Tab' ? 'block' : 'none';
         if (document.getElementById('phase6Tab')) document.getElementById('phase6Tab').style.display = target === 'phase6Tab' ? 'block' : 'none';
+        if (document.getElementById('alertsTab')) document.getElementById('alertsTab').style.display = target === 'alertsTab' ? 'block' : 'none';
       });
     });
+
+    async function loadAlerts() {
+      try {
+        const [sumRes, listRes] = await Promise.all([
+          fetch('/api/alerts/summary'),
+          fetch('/api/alerts?limit=200')
+        ]);
+        if (sumRes.ok) {
+          const s = await sumRes.json();
+          const st = s.by_lifecycle_state || {};
+          const activeCnt = (st.ACTIVE || 0) + (st.ACKNOWLEDGED || 0);
+          document.getElementById('alertTabCount').innerText = String(activeCnt);
+          document.getElementById('alertSummaryStats').innerText =
+            `Active: ${st.ACTIVE || 0} | Ack: ${st.ACKNOWLEDGED || 0} | Resolved: ${st.RESOLVED || 0} | Expired: ${st.EXPIRED || 0}`;
+          const lr = s.latest_evaluation_run;
+          document.getElementById('alertLatestRun').innerText = lr
+            ? `${lr.status} (${lr.completed_at_utc}, fresh=${lr.forecast_freshness}, evaluated=${lr.cells_evaluated})`
+            : 'NONE';
+        }
+        if (listRes.ok) {
+          const data = await listRes.json();
+          const alerts = data.alerts || [];
+          const activeList = alerts.filter(a => a.lifecycle_state === 'ACTIVE' || a.lifecycle_state === 'ACKNOWLEDGED');
+          const histList = alerts.filter(a => a.lifecycle_state === 'RESOLVED' || a.lifecycle_state === 'EXPIRED');
+
+          const activeTbody = document.getElementById('activeAlertsTbody');
+          activeTbody.innerHTML = activeList.length === 0
+            ? '<tr><td colspan="8" style="text-align:center; color:#64748b;">No active or acknowledged candidate alerts.</td></tr>'
+            : activeList.map(a => {
+                const ackBtn = a.lifecycle_state === 'ACTIVE'
+                  ? `<button onclick="acknowledgeAlert('${a.alert_id}')" style="margin-right:4px; padding:2px 8px; font-size:11px; cursor:pointer;">Ack</button>`
+                  : '';
+                const resBtn = `<button onclick="resolveAlert('${a.alert_id}')" style="padding:2px 8px; font-size:11px; cursor:pointer;">Resolve</button>`;
+                const loc = (a.latitude != null && a.longitude != null) ? `${Number(a.latitude).toFixed(4)}, ${Number(a.longitude).toFixed(4)}` : '--';
+                return `<tr>
+                  <td><code>${a.alert_id}</code></td>
+                  <td><strong>${a.severity}</strong></td>
+                  <td><code>${a.grid_id}</code><br><span style="font-size:11px; color:#64748b;">${loc}</span></td>
+                  <td style="max-width:260px; font-size:11px;"><strong>${a.rule_id}</strong><br>${a.explanation}</td>
+                  <td style="font-size:11px;">${a.data_source}<br>Freshness: <strong>${a.data_freshness}</strong></td>
+                  <td style="font-size:11px;"><code>${a.qualification_status}</code></td>
+                  <td style="font-size:11px;">${a.created_at_utc}<br>Upd: ${a.updated_at_utc}</td>
+                  <td><span class="badge badge-info">${a.lifecycle_state}</span><div style="margin-top:4px;">${ackBtn}${resBtn}</div></td>
+                </tr>`;
+              }).join('');
+
+          const histTbody = document.getElementById('historyAlertsTbody');
+          histTbody.innerHTML = histList.length === 0
+            ? '<tr><td colspan="7" style="text-align:center; color:#64748b;">No resolved or expired alerts yet.</td></tr>'
+            : histList.map(a => `<tr>
+                <td><code>${a.alert_id}</code></td>
+                <td>${a.severity}</td>
+                <td><code>${a.grid_id}</code></td>
+                <td style="font-size:11px;">${a.rule_id}</td>
+                <td style="font-size:11px;"><code>${a.qualification_status}</code></td>
+                <td style="font-size:11px;">${a.updated_at_utc}${a.resolution_note ? '<br>' + a.resolution_note : ''}</td>
+                <td><span class="badge">${a.lifecycle_state}</span></td>
+              </tr>`).join('');
+        }
+      } catch (e) {
+        console.warn("Alert load error:", e);
+      }
+    }
+
+    async function acknowledgeAlert(alertId) {
+      await fetch(`/api/alerts/${encodeURIComponent(alertId)}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actor: 'dashboard_operator' })
+      });
+      await loadAlerts();
+    }
+
+    async function resolveAlert(alertId) {
+      await fetch(`/api/alerts/${encodeURIComponent(alertId)}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actor: 'dashboard_operator', note: 'Resolved via dashboard' })
+      });
+      await loadAlerts();
+    }
+
+    async function evaluateAlertsNow() {
+      await fetch('/api/alerts/evaluate', { method: 'POST' });
+      await loadAlerts();
+    }
 
     // Dev Tab Toggle for Quarantined SAR Extent
     let sarDevVisible = false;

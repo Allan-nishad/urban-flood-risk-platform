@@ -51,6 +51,7 @@ class LiveWeatherRefresher:
         max_retries: int = 3,
         backoff_base_s: float = 1.0,
         sleep_fn: Callable[[float], None] = time.sleep,
+        on_refresh_success: Optional[Callable[[Dict[str, Any]], None]] = None,
     ):
         self.store = store
         self.adapter = adapter or OpenMeteoForecastAdapter()
@@ -60,6 +61,7 @@ class LiveWeatherRefresher:
         self.max_retries = int(max_retries)
         self.backoff_base_s = float(backoff_base_s)
         self._sleep = sleep_fn
+        self.on_refresh_success = on_refresh_success
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
 
@@ -81,7 +83,7 @@ class LiveWeatherRefresher:
                     error=None,
                     records_written=written,
                 )
-                return {
+                summary = {
                     "success": True,
                     "provider": res["provider"],
                     "model_id": res["model_id"],
@@ -89,6 +91,12 @@ class LiveWeatherRefresher:
                     "records_written": written,
                     "status": "LIVE",
                 }
+                if self.on_refresh_success is not None:
+                    try:
+                        self.on_refresh_success(summary)
+                    except Exception:
+                        logger.exception("on_refresh_success callback failed")
+                return summary
             except ProviderError as e:
                 last_err = str(e)
                 logger.warning("Open-Meteo refresh attempt %d/%d failed: %s", attempt + 1, self.max_retries, last_err)
