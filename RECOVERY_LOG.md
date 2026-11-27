@@ -14,4 +14,10 @@
 - **Root Cause:** `DashboardRequestHandler.do_GET` stripped query strings (`self.path.split("?")[0]`) and ignored invalid `grid_id` or unknown params, returning `200` with all 1,170 cells; unsupported HTTP methods (`POST`, etc.) fell back to `BaseHTTPRequestHandler` HTML `501`; `404` error JSON lacked `code` and `detail` fields.
 - **Files Changed:** `src/floodrisk/dashboard/server.py`, `tests/test_server.py`.
 - **Before Evidence:** `pytest tests/test_server.py` -> 4 failed (`200 == 404`, `200 == 400`, `501 == 405`, missing `code`/`detail`).
-- **After Evidence:** `pytest tests/test_server.py` -> 8 passed; full suite passing.
+- **After Evidence:** `pytest tests/test_server.py` -> 8 passed; full suite passing (`117 passed`).
+
+## Defect 3: `UI-01` (Tier 3 — Dashboard Integration, Hardcoded Tables, Duplicate DOM IDs, Null Fallbacks)
+- **Root Cause:** `index.html` contained 5 duplicate `<div id="phase6Tab">` blocks (one nested inside `inspectorTab`), hardcoded fake KPI values (`266 Cells`, `68.20 mm`), hardcoded `phase6GroundTruthTbody` ignoring `/api/phase6/flood-evidence`, 6 unfetched Phase 6/7 endpoints, `"NORMAL"`/`0.0` fallbacks, and swallowed `fetch` errors.
+- **Files Changed:** `src/floodrisk/dashboard/static/index.html`, `tests/test_server.py`.
+- **Before Evidence:** `pytest tests/test_server.py::test_frontend_html_integration_and_no_duplicates` -> FAILED (`assert 5 == 1`).
+- **After Evidence:** `pytest tests/test_server.py` -> 9 passed; headless Edge DOM verification confirmed 24 Phase 6 incident rows, 73 Phase 7 manifest rows, `STALE` badge, and real KPI values (`0 Cells` heavy rain, `6.10 mm` max 24h); screenshot saved to `C:\Users\allan\AppData\Local\Temp\audit_20261127_092600\dashboard_headless.png`.

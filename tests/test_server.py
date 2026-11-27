@@ -131,3 +131,30 @@ def test_api_cross_endpoint_consistency(live_server_url):
     assert p6_ev["incident_record_count"] == 24
     assert p7_man["total_datasets_registered"] == 73
 
+
+def test_frontend_html_integration_and_no_duplicates():
+    html = Path("src/floodrisk/dashboard/static/index.html").read_text(encoding="utf-8")
+
+    # 1. No duplicate phase6Tab or table body IDs
+    assert html.count('id="phase6Tab"') == 1
+    assert html.count('id="phase6GroundTruthTbody"') == 1
+    assert html.count('id="phase6ManifestTbody"') == 1
+
+    # 2. Phase 6 & 7 endpoints actually fetched by frontend
+    for route in [
+        "/api/phase6/nwp",
+        "/api/phase6/sar",
+        "/api/phase6/hydrology",
+        "/api/phase7/summary",
+        "/api/phase7/uncertainty",
+        "/api/phase7/manifest",
+    ]:
+        assert route in html, f"Frontend missing fetch for {route}"
+
+    # 3. No hardcoded Rainbow Drive row in JS and no null->NORMAL fallback
+    assert "<tr><td><strong>Rainbow Drive Layout</strong>" not in html
+    assert '|| "NORMAL"' not in html
+    assert 'id="apiErrorBanner"' in html
+    assert "STALE" in html
+
+
