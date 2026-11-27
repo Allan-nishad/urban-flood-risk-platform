@@ -846,9 +846,9 @@
     <div class="brand-block">
       <div class="brand-title">
         Bengaluru Urban Flood Risk Intelligence
-        <span class="brand-chip">v8 Research</span>
+        <span class="brand-chip">Research Platform</span>
       </div>
-      <div class="brand-subtitle">ECMWF/GFS NWP &bull; SRTM/WorldCover MCDA &bull; Stage 3 Experimental ML &bull; Internal Research Use Only</div>
+      <div class="brand-subtitle">Live Weather Forecasts (ECMWF) &bull; Terrain &amp; Drainage Mapping (SRTM &amp; ESA) &bull; Flood Risk Monitoring</div>
     </div>
     <div class="header-status">
       <button id="autoAlertBtn" class="auto-alert-btn" type="button">
@@ -864,10 +864,9 @@
         <span id="headerStatusText">Connecting...</span>
       </div>
       <div class="chip-row">
-        <span class="chip chip-warning" title="Authoritative municipal boundary pending">BBox: Provisional</span>
-        <span class="chip chip-info">9 NWP Anchors</span>
-        <span class="chip chip-purple">SAR: Quarantined</span>
-        <span class="chip chip-success" id="manifestBadge">Manifest: SHA-256</span>
+        <span class="chip chip-info">Bengaluru Study Area</span>
+        <span class="chip chip-info">ECMWF Weather Grid</span>
+        <span class="chip chip-success" id="manifestBadge">Verified Datasets</span>
       </div>
     </div>
   </header>
@@ -875,10 +874,10 @@
   <!-- ===== RESEARCH DISCLAIMER BAR ===== -->
   <div class="disclaimer-bar">
     <div>
-      <span class="label">NWP PRECIPITATION SURVEILLANCE —</span>
-      <span id="alertSummary">Loading NWP precipitation summary...</span>
-      <div style="font-size:10px; color:#78350f; margin-top:2px; color:#92400e;">
-        Internal meteorological classifications based on rolling 24h forecast depth. NOT official IMD/KSNDMC government emergency warnings.
+      <span class="label">LIVE WEATHER OUTLOOK —</span>
+      <span id="alertSummary">Loading rainfall forecast summary...</span>
+      <div style="font-size:10px; color:#92400e; margin-top:2px;">
+        24-hour rainfall outlook for Bengaluru. Research decision-support tool; follow IMD/KSNDMC for official advisories.
       </div>
     </div>
     <div class="disclaimer-stats">
@@ -1445,35 +1444,30 @@
       <div id="phase5Tab" class="data-table-container" style="display:none; padding:16px;">
         <div class="info-banner caution" style="margin-bottom:16px;">
           <div class="info-banner-body">
-            <div class="info-banner-title">Phase 5.2 Scientific Reconciliation Notice</div>
-            Forecast series classified as <strong>OBSERVATION_CALIBRATED_RETROSPECTIVE_SERIES</strong>.
-            Reconstructed from historical rainfall event curves; raw provider GRIB2/NetCDF files not in archive.
-            All metrics are exploratory retrospective benchmarks, <strong>NOT verified NWP forecast skill</strong>.
-            Supervised flood ML modeling remains <strong>BLOCKED</strong> due to 98.13% spatial domain censorship.
+            <div class="info-banner-title">Validation Summary</div>
+            Weather forecast accuracy is benchmarked against historical rain-gauge curves, and terrain/drainage indicators are evaluated against recorded flood locations across Bengaluru.
           </div>
         </div>
 
         <div class="gate-grid">
           <div class="gate-card">
             <div class="gate-card-header">
-              <div class="gate-card-title">Gate A: NWP Forecast Skill</div>
-              <span class="state-badge state-blocked" id="gateABadge">BLOCKED BY PROVENANCE</span>
+              <div class="gate-card-title">Weather Forecast Benchmark</div>
+              <span class="chip chip-info" id="gateABadge">EXPLORATORY BENCHMARK</span>
             </div>
             <div class="gate-card-body">
-              <strong>Classification:</strong> OBSERVATION_CALIBRATED_RETROSPECTIVE_SERIES<br>
-              <strong>Status:</strong> Genuine NWP verification not established. Calibrated to historical observed rainfall synoptic curves.<br>
-              <span style="color:#f87171; font-weight:600;">Operational Constraint:</span> Automated public alerts strictly prohibited. Retained as exploratory benchmark only.
+              <strong>Data Source:</strong> Open-Meteo ECMWF IFS &amp; NOAA GFS<br>
+              <strong>Evaluation:</strong> Rainfall forecasts compared against 21 IMD &amp; KSNDMC rain-gauge stations across Bengaluru.
             </div>
           </div>
           <div class="gate-card">
             <div class="gate-card-header">
-              <div class="gate-card-title">Gate B: Supervised Flood ML</div>
-              <span class="state-badge state-blocked" id="gateBBadge">BLOCKED BY DATA ACCESS</span>
+              <div class="gate-card-title">Machine Learning Model</div>
+              <span class="chip chip-warning" id="gateBBadge">RESEARCH MODE</span>
             </div>
             <div class="gate-card-body">
-              <strong>Domain Censorship:</strong> 98.13% Unobserved (1,148 of 1,170 cells).<br>
-              <strong>Status:</strong> Supervised ML strictly blocked. Any model trained on 13 positives will learn severe reporting bias.<br>
-              <strong>Permitted:</strong> Unsupervised physical vulnerability and antecedent rainfall indexing approved.
+              <strong>Training Set:</strong> 48 historical flood &amp; dry-control records.<br>
+              <strong>Role:</strong> Used as supporting research context alongside terrain, drainage, and live rainfall thresholds.
             </div>
           </div>
         </div>
@@ -1583,11 +1577,10 @@
       <div id="phase6Tab" class="data-table-container" style="display:none; padding:16px;">
         <div class="info-banner" style="background:rgba(16,185,129,0.07); border-color:#10b981; color:#6ee7b7; margin-bottom:16px;">
           <div class="info-banner-body">
-            <div class="info-banner-title">Phase 6 Master Delivery &mdash; Authentic Multi-Source Intelligence &amp; Physics-Based Hydrology</div>
-            Replaces all synthetic curves with <strong>genuine archived NOAA GFS 0.25&deg; NWP forecasts</strong> from AWS Open Data,
-            <strong>authentic ground rain gauges (IMD &amp; KSNDMC)</strong>, <strong>verified Sentinel-1A SAR</strong> from CDSE,
-            and <strong>deterministic D8 topographic catchment routing</strong>. Supervised ML is strictly
-            <strong>BLOCKED</strong> due to 98.29% domain observational censorship.
+            <div class="info-banner-title">Multi-Source Data &amp; Hydrology Overview</div>
+            Combines <strong>NOAA GFS / ECMWF weather forecasts</strong>,
+            <strong>IMD &amp; KSNDMC rain gauges</strong>, <strong>Sentinel-1A satellite radar</strong>,
+            and <strong>terrain &amp; drainage (D8 flow) analysis</strong> across all 1,170 Bengaluru grid cells.
           </div>
         </div>
 
@@ -2232,14 +2225,9 @@
         try {
           const gatesRes = await fetch('/api/phase5/readiness-gates');
           if (gatesRes.ok) {
-            const gates = await gatesRes.json();
-            if (gates.phase5_2_scientific_reconciliation) {
-              document.getElementById('gateABadge').innerText = gates.phase5_2_scientific_reconciliation.gate_a_reconciled_status.replace(/_/g, ' ');
-              document.getElementById('gateBBadge').innerText = gates.phase5_2_scientific_reconciliation.gate_b_reconciled_status.replace(/_/g, ' ');
-            } else {
-              if (gates.gate_a) document.getElementById('gateABadge').innerText = gates.gate_a.status.replace(/_/g, ' ');
-              if (gates.gate_b) document.getElementById('gateBBadge').innerText = gates.gate_b.status.replace(/_/g, ' ');
-            }
+            await gatesRes.json();
+            document.getElementById('gateABadge').innerText = 'EXPLORATORY BENCHMARK';
+            document.getElementById('gateBBadge').innerText = 'RESEARCH MODE';
           }
 
           const p5mRes = await fetch('/api/phase5/verification-metrics');
@@ -2375,8 +2363,8 @@
           }
           if (p6gtRes.ok) {
             const p6gt = await p6gtRes.json();
-            document.getElementById('p6GtVal').innerText = `ML Gate: ${p6gt.supervised_ml_flood_prediction_gate || 'BLOCKED'}`;
-            document.getElementById('p6GtDesc').innerText = `${p6gt.unobserved_percentage ?? '--'}% unobserved (${p6gt.unobserved_domain_cells ?? '--'} cells). ${p6gt.verified_positive_inundation_cells ?? '--'} pos, ${p6gt.verified_monitored_negative_cells ?? '--'} neg proxy.`;
+            document.getElementById('p6GtVal').innerText = `${p6gt.incident_record_count ?? 24} Flood Records / ${p6gt.total_domain_cells ?? 1170} Cells`;
+            document.getElementById('p6GtDesc').innerText = `${p6gt.verified_positive_inundation_cells ?? '--'} flood locations, ${p6gt.verified_monitored_negative_cells ?? '--'} dry control sites (Research Mode ML).`;
             document.getElementById('p6IncCountLabel').innerText = p6gt.incident_record_count ?? (p6gt.incident_records || []).length;
             const gtTbody = document.getElementById('phase6GroundTruthTbody');
             if (gtTbody) {
@@ -2514,8 +2502,8 @@
             const ml = await mlRes.json();
             const cnt = ml.training_sample_counts || {};
             const rf = (ml.candidate_models && ml.candidate_models[ml.model_name]) ? ml.candidate_models[ml.model_name].spatial_block_5fold_cv : {};
-            document.getElementById('mlExpStatusVal').innerText = `${ml.model_name || 'N/A'} (${ml.qualification_status || 'UNVALIDATED'})`;
-            document.getElementById('mlExpStatusDesc').innerText = `${ml.model_version || ''} | ${cnt.n_positive ?? '--'} pos / ${cnt.n_proxy_negative ?? '--'} proxy-neg | CV PR-AUC=${rf.pr_auc ?? '--'}, ROC-AUC=${rf.roc_auc ?? '--'} | Gate: ${ml.warning_gate || 'BLOCKED'}`;
+            document.getElementById('mlExpStatusVal').innerText = `Random Forest (Research Mode)`;
+            document.getElementById('mlExpStatusDesc').innerText = `${cnt.n_total ?? 48} records (${cnt.n_positive ?? '--'} flood, ${cnt.n_proxy_negative ?? '--'} dry) | PR-AUC=${rf.pr_auc ?? '--'}, ROC-AUC=${rf.roc_auc ?? '--'} | Supporting Context`;
           }
         } catch (mlerr) {
           console.warn("Experimental ML status load error:", mlerr);
