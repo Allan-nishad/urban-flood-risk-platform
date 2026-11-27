@@ -11,6 +11,7 @@ from pathlib import Path
 import socketserver
 import threading
 from typing import Dict, Any, Optional, List
+from urllib.parse import urlparse, parse_qs
 import pandas as pd
 import numpy as np
 
@@ -535,13 +536,46 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self):
-        clean_path = self.path.split("?")[0]
+        parsed = urlparse(self.path)
+        clean_path = parsed.path
+        params = parse_qs(parsed.query, keep_blank_values=True)
+
+        if clean_path.startswith("/api/"):
+            allowed_params = {"grid_id"} if clean_path == "/api/cells" else set()
+            unknown_params = set(params.keys()) - allowed_params
+            if unknown_params:
+                self._send_error_json(
+                    400,
+                    "INVALID_PARAMETER",
+                    "Invalid query parameter",
+                    f"Unsupported parameter(s): {', '.join(sorted(unknown_params))}",
+                )
+                return
 
         # REST API Endpoints
         if clean_path == "/api/summary":
             self._send_json(self.datastore.summary)
             return
         elif clean_path == "/api/cells":
+            if "grid_id" in params:
+                target_id = params["grid_id"][0].strip()
+                if not target_id:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid query parameter", "grid_id cannot be empty")
+                    return
+                matched = [
+                    f for f in self.datastore.cells_geojson.get("features", [])
+                    if f.get("properties", {}).get("grid_id") == target_id
+                ]
+                if not matched:
+                    self._send_error_json(404, "CELL_NOT_FOUND", "Grid cell not found", f"No cell found for grid_id='{target_id}'")
+                    return
+                filtered_fc = {
+                    "type": "FeatureCollection",
+                    "crs": self.datastore.cells_geojson.get("crs"),
+                    "features": matched,
+                }
+                self._send_json(filtered_fc)
+                return
             self._send_json(self.datastore.cells_geojson)
             return
         elif clean_path == "/api/incidents":
@@ -599,7 +633,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             self._send_json({"status": "ok", "service": "urban-flood-risk-platform-dashboard"})
             return
         elif clean_path.startswith("/api/"):
-            self._send_json({"error": "Endpoint not found", "path": clean_path}, status=404)
+            self._send_error_json(404, "ENDPOINT_NOT_FOUND", "Endpoint not found", f"No route registered for '{clean_path}'")
             return
 
         # Serve static HTML console
@@ -617,6 +651,35 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
 
         # Fallback to standard static file serving
         return super().do_GET()
+
+    def _send_error_json(self, status: int, code: str, error: str, detail: str):
+        self._send_json({"error": error, "code": code, "detail": detail}, status=status)
+
+    def _method_not_allowed(self, method: str):
+        self._send_error_json(
+            405,
+            "METHOD_NOT_ALLOWED",
+            "Method not allowed",
+            f"HTTP {method} is not supported on '{self.path.split('?')[0]}'; use GET.",
+        )
+
+    def do_POST(self):
+        self._method_not_allowed("POST")
+
+    def do_PUT(self):
+        self._method_not_allowed("PUT")
+
+    def do_DELETE(self):
+        self._method_not_allowed("DELETE")
+
+    def do_PATCH(self):
+        self._method_not_allowed("PATCH")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.end_headers()
 
     def _send_json(self, data: Any, status: int = 200):
         body = json.dumps(data, allow_nan=False).encode("utf-8")

@@ -60,3 +60,74 @@ def test_cli_process_rainfall_missing_dir_reports_unavailable(tmp_path):
     res = runner.invoke(main, ["process-rainfall", "--rainfall-dir", str(missing_dir)])
     assert res.exit_code == 0
     assert "UNAVAILABLE" in res.output
+
+
+@pytest.fixture(scope="module")
+def live_server_url():
+    from floodrisk.dashboard.server import run_dashboard
+
+    srv = run_dashboard(host="127.0.0.1", port=0, blocking=False)
+    port = srv.server_address[1]
+    yield f"http://127.0.0.1:{port}"
+    srv.shutdown()
+    srv.server_close()
+
+
+def _http_req(url: str, method: str = "GET"):
+    req = urllib.request.Request(url, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status, dict(resp.headers), json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            body = json.loads(raw)
+        except Exception:
+            body = raw
+        return e.code, dict(e.headers), body
+
+
+def test_api_cells_filter_and_404_on_invalid_grid_id(live_server_url):
+    sc, _, body = _http_req(f"{live_server_url}/api/cells?grid_id=INVALID_999")
+    assert sc == 404
+    assert {"error", "code", "detail"}.issubset(body.keys())
+
+    sc_ok, _, body_ok = _http_req(f"{live_server_url}/api/cells?grid_id=g1000_7472_1625")
+    assert sc_ok == 200
+    assert len(body_ok["features"]) == 1
+    assert body_ok["features"][0]["properties"]["grid_id"] == "g1000_7472_1625"
+
+
+def test_api_400_on_unknown_query_params(live_server_url):
+    for path in ["/api/cells?foo=bar", "/api/summary?bad=1"]:
+        sc, _, body = _http_req(f"{live_server_url}{path}")
+        assert sc == 400
+        assert {"error", "code", "detail"}.issubset(body.keys())
+
+
+def test_api_405_json_on_unsupported_method(live_server_url):
+    sc, hdrs, body = _http_req(f"{live_server_url}/api/cells", method="POST")
+    assert sc == 405
+    assert "application/json" in hdrs.get("Content-Type", "")
+    assert isinstance(body, dict)
+    assert {"error", "code", "detail"}.issubset(body.keys())
+
+
+def test_api_404_unified_error_schema(live_server_url):
+    sc, _, body = _http_req(f"{live_server_url}/api/nonexistent")
+    assert sc == 404
+    assert {"error", "code", "detail"}.issubset(body.keys())
+
+
+def test_api_cross_endpoint_consistency(live_server_url):
+    _, _, summary = _http_req(f"{live_server_url}/api/summary")
+    _, _, cells = _http_req(f"{live_server_url}/api/cells")
+    _, _, incidents = _http_req(f"{live_server_url}/api/incidents")
+    _, _, p6_ev = _http_req(f"{live_server_url}/api/phase6/flood-evidence")
+    _, _, p7_man = _http_req(f"{live_server_url}/api/phase7/manifest")
+
+    assert summary["study_area"]["total_cells"] == len(cells["features"]) == 1170
+    assert summary["historical_surveillance"]["total_incidents_catalogued"] == len(incidents) == 21
+    assert p6_ev["incident_record_count"] == 24
+    assert p7_man["total_datasets_registered"] == 73
+
