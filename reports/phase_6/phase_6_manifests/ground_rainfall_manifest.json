@@ -1,0 +1,40 @@
+{
+  "manifest_name": "Phase 6B Ground Rain Gauge Observation Manifest",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells, EPSG:6933)",
+  "sources": [
+    "India Meteorological Department (IMD) Primary Observatories",
+    "Karnataka State Natural Disaster Monitoring Centre (KSNDMC) Telemetric Rain Gauge Network",
+    "Central Pollution Control Board (CPCB) CAAQM Network (Air Quality Metadata Audit)"
+  ],
+  "created_at_utc": "2026-11-05T16:53:06.433631Z",
+  "datasets": {
+    "rain_gauge_station_registry": {
+      "file_path": "data/processed/phase6/ground_rainfall\\rain_gauge_station_registry.parquet",
+      "file_size_bytes": 9500,
+      "sha256_checksum": "62ba8438f73fdba7a1a60ed5167b1592953c945b8d671aaea386658215c6728d",
+      "description": "Station metadata, elevation, sensor type, topographic classification, and hydrological role",
+      "record_count": 21
+    },
+    "ground_rainfall_observations": {
+      "file_path": "data/processed/phase6/ground_rainfall\\ground_rainfall_observations.parquet",
+      "file_size_bytes": 11605,
+      "sha256_checksum": "c22523165f23936653eb643fc04632e705701293e4d85c5e3dacd2b2a7dce008",
+      "description": "Daily 24h accumulated rainfall records from authentic ground gauges",
+      "record_count": 272
+    },
+    "gauge_coverage_by_cell": {
+      "file_path": "data/processed/phase6/ground_rainfall\\gauge_coverage_by_cell.parquet",
+      "file_size_bytes": 26667,
+      "sha256_checksum": "274cfa058bd31875295683d307b6c12b21c6656229e3711b12fa1d525f77b9ad",
+      "description": "Distance to nearest gauge, density of gauges, and coverage tier for all 1,170 cells",
+      "record_count": 1170
+    },
+    "gfs_vs_gauge_validation_metrics": {
+      "file_path": "data/processed/phase6/ground_rainfall\\gfs_vs_gauge_validation_metrics.parquet",
+      "file_size_bytes": 14737,
+      "sha256_checksum": "8d3077523e00c8d1fdf0dbba19a955bf10940b94941c2a8a548a231155152622",
+      "description": "Paired 24h NWP forecast vs ground gauge observations and error metrics",
+      "record_count": 256
+    }
+  }
+}

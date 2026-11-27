@@ -1,0 +1,165 @@
+PHASE 5.2 BASELINE VERIFICATION AUDIT
+Timestamp: 2026-11-05T16:04:00.694551+00:00
+================================================================================
+
+--- Checking Manifest: Phase 1-4.7 Baseline (reports/dataset_manifest.json) ---
+Registered datasets count: 33
+  [VERIFIED] flood_event_inventory_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\flood_event_inventory_bengaluru.parquet)
+    SHA-256: 9e1917c17838b7b8dd3c40bbbc1e989c51155db396713ea12266da148b3f0aa6
+    Size: 27828 bytes, Rows: N/A
+  [VERIFIED] flood_source_registry_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\flood_source_registry_bengaluru.parquet)
+    SHA-256: 9a5f2017f24b5740288f23b5b49ed9a6fe2f4a1353e8a770989f49aaec50b018
+    Size: 8826 bytes, Rows: N/A
+  [VERIFIED] grid_bengaluru_rural_1000m (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\grid_bengaluru_rural_1000m.geojson)
+    SHA-256: 948fdd609b123223b74765ae5882191d066811a843ab6c9fa1e3709df0e1e52b
+    Size: 6544631 bytes, Rows: N/A
+  [VERIFIED] grid_bengaluru_urban_1000m (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\grid_bengaluru_urban_1000m.gpkg)
+    SHA-256: aa11c33bd648ea07573d1421981cc63abf898d95cefb5516cd9e34ce41fc64a2
+    Size: 569344 bytes, Rows: N/A
+  [VERIFIED] grid_features_bengaluru_urban_1000m (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\grid_features_bengaluru_urban_1000m.parquet)
+    SHA-256: d5404934065182e050369d0f1352b931e06b010283f56231dfe698c97976b6ee
+    Size: 50412 bytes, Rows: N/A
+  [VERIFIED] grid_mysuru_urban_1000m (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\grid_mysuru_urban_1000m.geojson)
+    SHA-256: afb1542de2cc68bb2e70e86497b5bc8f0317e24f46e057f6e29557b21765add3
+    Size: 469289 bytes, Rows: N/A
+  [VERIFIED] n12e077 (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\N12E077.hgt)
+    SHA-256: d70ed4171e76a7296268016e903563027329086be8c6d89136de8582b9a5ed96
+    Size: 25934402 bytes, Rows: N/A
+  [VERIFIED] n12e077.srtmgl1.hgt (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\N12E077.SRTMGL1.hgt.zip)
+    SHA-256: 37c8aafaa1acae395053cab5bd1d3766676897a7c08724590a1999d4caa28d76
+    Size: 10071528 bytes, Rows: N/A
+  [VERIFIED] n12e077.srtmgl1 (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\N12E077.SRTMGL1.tif)
+    SHA-256: 697aa24791cd02b43a5002fc5b7f6137434d74c420d5a7a0d6f58743b1595b15
+    Size: 8095151 bytes, Rows: N/A
+  [VERIFIED] n13e077 (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\N13E077.hgt)
+    SHA-256: 4a9c7d71333a6c83bf0d6afbf1ebfd47b8fcee8558f6f11c88b678ee63391627
+    Size: 25934402 bytes, Rows: N/A
+  [VERIFIED] n13e077.srtmgl1.hgt (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\N13E077.SRTMGL1.hgt.zip)
+    SHA-256: 17d69dfe6a9c484a23844d81b682adb27fcf384f4f4cc27b06935079ef659790
+    Size: 7813126 bytes, Rows: N/A
+  [VERIFIED] n13e077.srtmgl1 (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\N13E077.SRTMGL1.tif)
+    SHA-256: d9a8821fd3017803f3ab7086afd7ba60679aa2e7b4c1dde09395f649073d2fd6
+    Size: 6783967 bytes, Rows: N/A
+  [VERIFIED] srtmgl1_n12_n13_e077_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\elevation\srtm\SRTMGL1_N12_N13_E077_Bengaluru.tif)
+    SHA-256: ba45614211dbcbf686a47b36e19a32a9cfd82ce7c82a80bcc9e269a95d93946f
+    Size: 14876879 bytes, Rows: N/A
+  [VERIFIED] esa_worldcover_10m_2021_v200_n12e075_map (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\raw\land_cover\ESA_WorldCover_10m_2021_v200_N12E075_Map.tif)
+    SHA-256: f9269901e07d86c2e180d661d0e8924e3ee57dd589f7433b9874861b3c65a978
+    Size: 127650362 bytes, Rows: N/A
+  [VERIFIED] sentinel1_scene_registry_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\sentinel1_scene_registry_bengaluru.parquet)
+    SHA-256: 234d58d00cd56329e3db3543e282e59776eb7d118b4c3984646901126c28138b
+    Size: 11806 bytes, Rows: N/A
+  [VERIFIED] sentinel1_incident_comparison_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\sentinel1_incident_comparison_bengaluru.parquet)
+    SHA-256: 3a74099ac24b5220e20f79ebe52e0ca9e14e372109f9c37718ac5fe8419f4d53
+    Size: 10503 bytes, Rows: N/A
+  [VERIFIED] sentinel1_grid_features_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\sentinel1_grid_features_bengaluru.parquet)
+    SHA-256: 6675ede51339e813170d15f3d9d236c0da609cf3092ecddbab4601e8aecda8ec
+    Size: 40711 bytes, Rows: N/A
+  [VERIFIED] sentinel1_candidate_water_mask_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\sentinel1_candidate_water_mask_bengaluru.tif)
+    SHA-256: cb874190a894ae244d4a2f18381d9af80125b7a5e906d8bfabf2a59331e82f75
+    Size: 374203 bytes, Rows: N/A
+  [VERIFIED] sentinel1_candidate_flood_change_mask_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\sentinel1_candidate_flood_change_mask_bengaluru.tif)
+    SHA-256: f41f6b6de685f3b56314cdc2e96b18c0c3b50a1ba4e36b75b8bd748bfe29fa4f
+    Size: 336641 bytes, Rows: N/A
+  [VERIFIED] features_static_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\features_static_bengaluru.parquet)
+    SHA-256: cbbdac220de4d03c30c52a0b86e9f322ea94ae950e2e7b7f4b9f280444eb9218
+    Size: 80989 bytes, Rows: N/A
+  [VERIFIED] features_rainfall_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\features_rainfall_bengaluru.parquet)
+    SHA-256: a1084f34a160bb2c47d21fb00d29107658c7ddff33d2f0d9e3d391ecb42741dd
+    Size: 72626 bytes, Rows: N/A
+  [VERIFIED] features_integrated_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\features_integrated_bengaluru.parquet)
+    SHA-256: e6c48c665a559293186a3484ed310fe5a6e333c1326027a5fdccf27667bb8f4f
+    Size: 165317 bytes, Rows: N/A
+  [VERIFIED] feature_registry (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\feature_registry.json)
+    SHA-256: 081c59607c38caa82b648c0af6d1330232c1d7d0ecb2e48da3639ead874ad49d
+    Size: 11710 bytes, Rows: N/A
+  [VERIFIED] exploratory_risk_indicators_bengaluru (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\exploratory_risk_indicators_bengaluru.parquet)
+    SHA-256: 3b1e329891f07f5cf9c1f74987694411f86a3dae4d11df08b72649ffe928c902
+    Size: 663821 bytes, Rows: N/A
+  [VERIFIED] phase3_model_features (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\phase3_model_features.parquet)
+    SHA-256: fa56947820baf01bc67034342912843563665a8a25f35e5827327b92772cce79
+    Size: 275694 bytes, Rows: N/A
+  [VERIFIED] phase3_isolation_forest_results (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\phase3_isolation_forest_results.parquet)
+    SHA-256: 6fc85f51c25e32a76b936e7857b5b6cd72718f3306f4f4e56d32671e8d3a6916
+    Size: 1092964 bytes, Rows: N/A
+  [VERIFIED] phase3_mahalanobis_results (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\phase3_mahalanobis_results.parquet)
+    SHA-256: 0ccf10549bc75ec0ac03d4ec4735cf8852bafe9992b0d003eb8f12b4c412f65e
+    Size: 728236 bytes, Rows: N/A
+  [VERIFIED] phase3_mcda_results (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\phase3_mcda_results.parquet)
+    SHA-256: 2167e804e8c675ef3f109402054b779d69873994e8cf1f3ed90d8dc61e2b6a2d
+    Size: 894578 bytes, Rows: N/A
+  [VERIFIED] phase3_model_comparison (C:\Users\allan\Documents\Projects\urban-flood-risk-platform\data\processed\phase3_model_comparison.parquet)
+    SHA-256: 59c33bbaf00126c364523797c8334de4c3f43119e9c565fefb1e3633589b1277
+    Size: 1487931 bytes, Rows: N/A
+  [VERIFIED] forecast_rainfall_bengaluru (data/processed/forecast_rainfall_bengaluru.parquet)
+    SHA-256: 2a96d9106446c1ae8f29f837f74e32b50230c6218a30246ad4c87610e915bcf8
+    Size: 431406 bytes, Rows: N/A
+  [VERIFIED] forecast_exposure_indicators_bengaluru (data/processed/forecast_exposure_indicators_bengaluru.parquet)
+    SHA-256: 5cc021f802b8846d9767da435ada53233a226f702ef463eb9d55a4d137bde543
+    Size: 19204 bytes, Rows: N/A
+  [VERIFIED] dynamic_risk_intelligence_bengaluru (data/processed/dynamic_risk_intelligence_bengaluru.parquet)
+    SHA-256: 6081fd84222233531108f6700e20eb3a8c51b34bff01840af4631defb382fd69
+    Size: 107397 bytes, Rows: N/A
+  [VERIFIED] flood_event_monitoring_log (data/processed/flood_event_monitoring_log.parquet)
+    SHA-256: 0d205caba6fe5c145391eb2b422d0835cee48986fec8d5421e2c30d29c5bdb15
+    Size: 12967 bytes, Rows: N/A
+
+--- Checking Manifest: Phase 5 Initial Baseline (reports/phase_5_dataset_manifest.json) ---
+Registered datasets count: 8
+  [VERIFIED] archived_nwp_forecasts_bengaluru (data/processed/phase5_forecast_archive/archived_nwp_forecasts_bengaluru.parquet)
+    SHA-256: e2dc657549dec3279e5c7d15e0b571b8c81135416d16a9e9e15843777d232b4b
+    Size: 620362 bytes, Rows: 198900
+  [VERIFIED] independent_rainfall_observations_bengaluru (data/processed/phase5_rainfall_observations/independent_rainfall_observations_bengaluru.parquet)
+    SHA-256: a9ecdb24b060400f4af3b466862851affa0537bee11288d485cc59ace6516db9
+    Size: 50521 bytes, Rows: 59670
+  [VERIFIED] forecast_observation_matched_pairs (data/processed/phase5_forecast_observation_matches/forecast_observation_matched_pairs.parquet)
+    SHA-256: 458a5c09bcc88dcf919e082980cb960e5f77c4fb8c065ea0ecd22c0e68a14b78
+    Size: 1743615 bytes, Rows: 183690
+  [VERIFIED] forecast_verification_metrics_by_lead_time (data/processed/phase5_forecast_verification/forecast_verification_metrics_by_lead_time.parquet)
+    SHA-256: ea5b07f115861699ac3153f5cd94f190470b21077ea30cc1d5e4110b33f67a92
+    Size: 15622 bytes, Rows: 15
+  [VERIFIED] authentic_sar_scene_manifest (data/processed/phase5_sar_observations/authentic_sar_scene_manifest.parquet)
+    SHA-256: 87483121cae6c666ca5271c76c68276f34fabe5382ac3b54bd2a834d7d0a6006
+    Size: 10567 bytes, Rows: 3
+  [VERIFIED] independent_flood_evidence_records (data/processed/phase5_flood_evidence/independent_flood_evidence_records.parquet)
+    SHA-256: 94b1ba00851b13f7f044670c2650d039bbc8e2cc564262edf036be985feaf224
+    Size: 11487 bytes, Rows: 21
+  [VERIFIED] flood_validation_reference_matrix (data/processed/phase5_flood_validation_dataset/flood_validation_reference_matrix.parquet)
+    SHA-256: 1c87db6ee76b1e7a1000206c73da04efb850216ea2dd824c3c4d0b1af519608d
+    Size: 48020 bytes, Rows: 1170
+  [VERIFIED] flood_evidence_evaluation_metrics (data/processed/phase5_flood_validation_dataset/flood_evidence_evaluation_metrics.parquet)
+    SHA-256: a581e90ae9d44de76de5fe31091c3232b2e7ced362996ab09e2ffef9e0a284d0
+    Size: 8732 bytes, Rows: 5
+
+--- Checking Manifest: Phase 5 Final Deliverables (reports/phase_5_final_dataset_manifest.json) ---
+Registered datasets count: 8
+  [VERIFIED] archived_nwp_forecasts_bengaluru (data/processed/phase5_final/forecast_archive/archived_nwp_forecasts_bengaluru.parquet)
+    SHA-256: e2dc657549dec3279e5c7d15e0b571b8c81135416d16a9e9e15843777d232b4b
+    Size: 620362 bytes, Rows: 198900
+  [VERIFIED] independent_rainfall_observations_bengaluru (data/processed/phase5_final/rainfall_observations/independent_rainfall_observations_bengaluru.parquet)
+    SHA-256: a9ecdb24b060400f4af3b466862851affa0537bee11288d485cc59ace6516db9
+    Size: 50521 bytes, Rows: 59670
+  [VERIFIED] forecast_observation_matched_pairs (data/processed/phase5_final/forecast_observation_matches/forecast_observation_matched_pairs.parquet)
+    SHA-256: 458a5c09bcc88dcf919e082980cb960e5f77c4fb8c065ea0ecd22c0e68a14b78
+    Size: 1743615 bytes, Rows: 183690
+  [VERIFIED] forecast_verification_metrics_by_lead_time (data/processed/phase5_final/forecast_verification/forecast_verification_metrics_by_lead_time.parquet)
+    SHA-256: 100be6fadac284e68caf5f191377fa0e2c6b8fc5d679a8182bba40565814b1e0
+    Size: 18076 bytes, Rows: 15
+  [VERIFIED] authentic_sar_scene_manifest (data/processed/phase5_final/sar_observations/authentic_sar_scene_manifest.parquet)
+    SHA-256: 87483121cae6c666ca5271c76c68276f34fabe5382ac3b54bd2a834d7d0a6006
+    Size: 10567 bytes, Rows: 3
+  [VERIFIED] independent_flood_evidence_records (data/processed/phase5_final/flood_evidence/independent_flood_evidence_records.parquet)
+    SHA-256: 94b1ba00851b13f7f044670c2650d039bbc8e2cc564262edf036be985feaf224
+    Size: 11487 bytes, Rows: 21
+  [VERIFIED] flood_validation_reference_matrix (data/processed/phase5_final/flood_validation_dataset/flood_validation_reference_matrix.parquet)
+    SHA-256: 1c87db6ee76b1e7a1000206c73da04efb850216ea2dd824c3c4d0b1af519608d
+    Size: 48020 bytes, Rows: 1170
+  [VERIFIED] flood_evidence_evaluation_metrics (data/processed/phase5_final/flood_validation_dataset/flood_evidence_evaluation_metrics.parquet)
+    SHA-256: 152c46a6c89eed428afe74b6ea0be1cecd8d8001a33af572499bf3df6baa34d9
+    Size: 11280 bytes, Rows: 7
+
+================================================================================
+AUDIT SUMMARY:
+Total Datasets Audited: 49
+Verification Result: ALL MATCHED BIT-FOR-BIT
+================================================================================

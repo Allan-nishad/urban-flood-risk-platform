@@ -1,0 +1,30 @@
+{
+  "manifest_name": "Phase 6E Physical Hydrology & Topographic Routing Manifest",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells, EPSG:6933)",
+  "methodology": "Deterministic D8 Flow Routing, Topographic Wetness Index (TWI), Priority-Flood Sink Filling, Rational Runoff Coefficient",
+  "driving_nwp_source": "Authentic NOAA GFS 0.25-deg AWS Open Data (Stage 6A)",
+  "created_at_utc": "2026-11-05T17:04:39.856833Z",
+  "datasets": {
+    "topographic_routing_static_features": {
+      "file_path": "data/processed/phase6/hydrology\\topographic_routing_static_features.parquet",
+      "file_size_bytes": 55398,
+      "sha256_checksum": "45b49a8cce9f2e864ee07380c1b94165478821e5d30b98758abccf4366cb8e7e",
+      "description": "Slope gradients, TWI, sink depths, upstream contributing area, and runoff coefficients for all 1,170 cells",
+      "record_count": 1170
+    },
+    "dynamic_hydrological_inundation_potential": {
+      "file_path": "data/processed/phase6/hydrology\\dynamic_hydrological_inundation_potential.parquet",
+      "file_size_bytes": 233899,
+      "sha256_checksum": "bd69b36ac35d5500e756fa23a75ec72d9f1e60311432d4d236ec0f2fb2c28e3a",
+      "description": "Daily 24h effective runoff depth, HIPI score, and physical flood risk tier coupled with genuine NOAA GFS forecasts",
+      "record_count": 19890
+    },
+    "hydrology_ground_truth_validation": {
+      "file_path": "data/processed/phase6/hydrology\\hydrology_ground_truth_validation.parquet",
+      "file_size_bytes": 48609,
+      "sha256_checksum": "d97f29584d29f943cb7fbaa9f68b1e85dcae5baf26a9a005887ed74bda331716",
+      "description": "Cross-validation of physical HIPI index against verified positive and negative ground truth incidents",
+      "record_count": 1170
+    }
+  }
+}

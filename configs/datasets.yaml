@@ -1,0 +1,186 @@
+# Dataset Catalogue for Urban Flood Risk Platform
+# Phase 1: Data Foundation Specification and Metadata Standards
+
+catalog_version: "1.0.0"
+
+datasets:
+  rainfall:
+    gpm_imerg_v07:
+      title: "NASA Global Precipitation Measurement (GPM) IMERG Final Precipitation L3"
+      provider: "NASA Goddard Earth Sciences Data and Information Services Center (GES DISC)"
+      product_version: "V07B (Final Run)"
+      dataset_type: "satellite_gauge_merged_gridded"
+      temporal_resolution: "30 minutes (calibrated daily aggregates available)"
+      spatial_resolution: "0.1° x 0.1° (~10 km at equator, ~9.7 km over Bengaluru)"
+      native_crs: "EPSG:4326"
+      native_units: "mm/hr (precipitationCal band)"
+      unit_conversion_rule: >
+        Variable attributes and temporal resolution must be verified dynamically.
+        For GPM_3IMERGHH half-hourly precipitationCal with native units 'mm/hr' over 30 minutes:
+          accumulated depth = precipitationCal [mm/hr] * 0.5 [hr] = mm depth.
+        For GPM_3IMERGDF daily accumulated precipitation with native units 'mm':
+          accumulated depth = precipitation [mm] (factor = 1.0; no 0.5 factor applied).
+        Never multiply by 0.5 automatically without metadata verification.
+      observation_period: "2000-06-01 to present (~3-3.5 months latency for Final Run; Early/Late runs available with 4-14 hr latency)"
+      geographic_coverage: "Global (60°N - 60°S)"
+      data_format: "HDF5 / GeoTIFF / NetCDF4"
+      quality_flags: "probabilityLiquidPrecipitation, precipitationQualityIndex (IR vs microwave vs gauge weight)"
+      aggregation_method: "Bilinear interpolation or area-weighted zonal remapping to EPSG:6933 1-km grid cells"
+      storage_path_template: "data/raw/rainfall/gpm_imerg_v07/{year}/{month}/"
+      authoritative_url: "https://gpm.nasa.gov/data/imerg"
+      access_method: "NASA Earthdata Login / HTTPS / OpenDAP"
+
+    imd_gridded_rainfall:
+      title: "India Meteorological Department (IMD) High-Resolution Daily Gridded Rainfall"
+      provider: "India Meteorological Department, Ministry of Earth Sciences, Govt. of India"
+      product_version: "IMD 0.25° x 0.25° Daily Rainfall"
+      dataset_type: "in_situ_gauge_interpolated"
+      temporal_resolution: "Daily (08:30 IST to 08:30 IST next day)"
+      spatial_resolution: "0.25° x 0.25° (~27 km)"
+      native_crs: "EPSG:4326"
+      native_units: "mm/day"
+      unit_conversion_rule: "Native values are already accumulated 24-hr rainfall depth in mm. No rate multiplication needed."
+      observation_period: "1901 to present (annual updates)"
+      geographic_coverage: "India landmass (6.5°N - 38.5°N, 66.5°E - 100.0°E)"
+      data_format: "Binary GRD / NetCDF"
+      quality_flags: "Gauge density mask, interpolated flag"
+      aggregation_method: "Distance-weighted interpolation to 1-km grid cell centers"
+      storage_path_template: "data/raw/rainfall/imd/{year}/"
+      authoritative_url: "https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html"
+      access_method: "IMD National Climate Data Services Portal / Pune CMPG"
+
+  terrain:
+    srtm_dem:
+      title: "NASA Shuttle Radar Topography Mission (SRTM) Global 1 Arc-Second DEM"
+      provider: "NASA / USGS / JPL"
+      product_version: "SRTM GL1 Version 3 (Void Filled)"
+      dataset_type: "digital_elevation_model"
+      temporal_resolution: "Static (February 2000 acquisition)"
+      spatial_resolution: "1 arc-second (~30 metres)"
+      native_crs: "EPSG:4326 (WGS84 horizontal, EGM96 vertical geoid)"
+      native_units: "metres above sea level"
+      nodata_value: -32768
+      data_type: "Int16"
+      vertical_accuracy: "< 16 m absolute vertical error, ~6-10 m relative vertical error"
+      geographic_coverage: "Global (60°N - 56°S)"
+      data_format: "GeoTIFF (.tif) or HGT"
+      derived_features:
+        - "elevation_mean_m"
+        - "elevation_min_m"
+        - "elevation_max_m"
+        - "elevation_std_m"
+        - "slope_mean_deg"
+        - "topographic_position_index"
+      resampling_method_to_grid: >
+        Bilinear or cubic resampling for continuous elevations;
+        Cell-level statistics (mean, min, max, std of 30m sub-pixels) computed for each 1-km equal-area cell.
+        Explicitly acknowledge: SRTM C-band reflects from building roofs and tree canopies, representing
+        a composite surface elevation (DSM) rather than a bare ground DTM. It does not measure ground-level
+        street or drainage channel elevations, and raw urban SRTM does not support direct HAND calculations
+        without rigorous hydrological drainage network conditioning.
+      storage_path_template: "data/raw/terrain/srtm_30m/{tile}.tif"
+      authoritative_url: "https://lpdaac.usgs.gov/products/srtmgl1v003/"
+
+  hydrology:
+    merit_hydro:
+      title: "MERIT Hydro: Multi-Error-Removed Improved-Terrain Hydrography"
+      provider: "Yamazaki Lab, University of Tokyo"
+      product_version: "Version 1.0.1"
+      dataset_type: "hydrological_raster"
+      temporal_resolution: "Static baseline"
+      spatial_resolution: "3 arc-seconds (~90 metres)"
+      native_crs: "EPSG:4326"
+      tile_naming_convention: "5° x 5° tiles named by lower-left corner: n{lat}e{lon}_{layer}.tif"
+      bengaluru_target_tile: "n10e075_upa.tif (covers 10.0°N to 15.0°N, 75.0°E to 80.0°E)"
+      regional_package: "upa_n00e070.tar (covers 0° to 30°N, 70° to 100°E)"
+      bands:
+        upa:
+          name: "Upstream Contributing Area"
+          unit: "km^2"
+          description: "Upstream drainage accumulation area in square kilometres (Float32)."
+          nodata_value: -9999.0
+        elv:
+          name: "Hydrologically Adjusted Elevation"
+          unit: "metres"
+          nodata_value: -9999.0
+        dir:
+          name: "Flow Direction"
+          unit: "D8 encoding (1=E, 2=SE, 4=S, 8=SW, 16=W, 32=NW, 64=N, 128=NE)"
+          nodata_value: 0
+        wth:
+          name: "River Channel Width"
+          unit: "metres"
+          nodata_value: -9999.0
+      aggregation_method_to_grid: "Zonal maximum and mean upstream contributing area per 1-km cell"
+      storage_path_template: "data/raw/hydrology/merit_hydro/{tile}_{layer}.tif"
+      authoritative_url: "http://hydro.iis.u-tokyo.ac.jp/~yamadai/MERIT_Hydro/"
+
+  land_cover:
+    esa_worldcover:
+      title: "ESA WorldCover 10m Global Land Cover"
+      provider: "European Space Agency (ESA) / VITO Remote Sensing"
+      product_version: "v200 (Reference Year 2021) / v100 (Reference Year 2020)"
+      dataset_type: "categorical_raster"
+      temporal_resolution: "Annual baseline"
+      spatial_resolution: "10 metres"
+      native_crs: "EPSG:4326"
+      tile_naming_convention: "3° x 3° tiles named by lower-left corner: ESA_WorldCover_10m_{year}_{version}_{tile}_Map.tif"
+      bengaluru_target_tile: "ESA_WorldCover_10m_2021_v200_N12E075_Map.tif (covers 12.0°N to 15.0°N, 75.0°E to 78.0°E)"
+      classes:
+        10: "Tree cover"
+        20: "Shrubland"
+        30: "Grassland"
+        40: "Cropland"
+        50: "Built-up land cover (structural presence; not direct soil imperviousness)"
+        60: "Bare / sparse vegetation"
+        70: "Snow and ice"
+        80: "Permanent water bodies"
+        90: "Herbaceous wetland"
+        95: "Mangroves"
+        100: "Moss and lichen"
+      nodata_value: 0
+      overall_accuracy: "76.7% globally; ~80% for built-up and water bodies in Asia"
+      derived_features:
+        - "fraction_built_up"
+        - "fraction_water_bodies"
+        - "fraction_vegetation"
+        - "fraction_wetland"
+      aggregation_method_to_grid: "Categorical area fraction (histogram of 10m sub-pixels) inside each 1-km cell"
+      storage_path_template: "data/raw/land_cover/esa_worldcover/{tile}.tif"
+      authoritative_url: "https://esa-worldcover.org/"
+
+  flood_events:
+    historical_inventories:
+      title: "Bengaluru & Karnataka Historical Flood Events & Inundation Inventory"
+      provider: "BBMP Disaster Management Cell, KSNDMC, KSRSAC, Media & Field Reports"
+      product_version: "v1.0-curated"
+      dataset_type: "vector_tabular"
+      spatial_precision_levels:
+        - "point_exact (GPS coordinates recorded at road underpass, lake breach, or flooded junction)"
+        - "subward_neighborhood (neighborhood named, e.g., Rainbow Drive Layout, HBR Layout 5th Block)"
+        - "ward (BBMP ward number specified, ~198-243 wards)"
+        - "taluk (Bengaluru South, East, North, Anekal)"
+        - "district (Bengaluru Urban district aggregate)"
+      canonical_schema: "schemas.yaml -> flood_events"
+      storage_path: "data/raw/flood_events/bengaluru_flood_events_curated.csv"
+      quarantine_path: "data/interim/flood_events_quarantine.csv"
+
+  weather_forecast:
+    numerical_weather_prediction:
+      title: "NWP Short-to-Medium-Range Weather Precipitation Forecasts"
+      providers:
+        - name: "IMD NCUM / WRF"
+          description: "IMD National Centre for Medium Range Weather Forecasting (NCUM 12km & 4km regional WRF)"
+        - name: "ECMWF HRES"
+          description: "ECMWF High Resolution 9km global deterministic forecast"
+        - name: "NOAA GFS"
+          description: "Global Forecast System 0.25° (~28km)"
+      temporal_parameters:
+        issue_time: "Cycle initiation UTC (00Z, 06Z, 12Z, 18Z)"
+        forecast_lead_steps: "3h, 6h, 12h, 24h, 48h, 72h accumulated rainfall"
+      canonical_schema: "schemas.yaml -> weather_forecast"
+      leakage_prevention_rule: >
+        In validation and backtesting, only forecasts with forecast_issue_time <= decision_timestamp
+        are admissible into the feature matrix. Any forecast issued after or at the exact validation
+        target time is quarantined.
+

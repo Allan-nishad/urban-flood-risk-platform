@@ -1,0 +1,752 @@
+{
+  "manifest_name": "Phase 7 Master Final Data Manifest",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells, EPSG:6933)",
+  "project_title": "AI-Based Early Detection and Forecasting of Urban Flood Risks Using Satellite and Weather Data",
+  "final_acceptance_status": "PHASE_7_COMPLETED_WITH_DOCUMENTED_LIMITATIONS",
+  "compiled_at_utc": "2026-11-05T18:52:04.540516Z",
+  "total_datasets_registered": 73,
+  "historical_baseline_count": 68,
+  "phase7_deliverable_count": 5,
+  "datasets": {
+    "flood_event_inventory_bengaluru": {
+      "dataset_id": "flood_event_inventory_bengaluru",
+      "original_id": "flood_event_inventory_bengaluru",
+      "file_path": "data\\processed\\flood_event_inventory_bengaluru.parquet",
+      "file_size_bytes": 27828,
+      "sha256_checksum": "9e1917c17838b7b8dd3c40bbbc1e989c51155db396713ea12266da148b3f0aa6",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "flood_source_registry_bengaluru": {
+      "dataset_id": "flood_source_registry_bengaluru",
+      "original_id": "flood_source_registry_bengaluru",
+      "file_path": "data\\processed\\flood_source_registry_bengaluru.parquet",
+      "file_size_bytes": 8826,
+      "sha256_checksum": "9a5f2017f24b5740288f23b5b49ed9a6fe2f4a1353e8a770989f49aaec50b018",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "grid_bengaluru_rural_1000m": {
+      "dataset_id": "grid_bengaluru_rural_1000m",
+      "original_id": "grid_bengaluru_rural_1000m",
+      "file_path": "data\\processed\\grid_bengaluru_rural_1000m.geojson",
+      "file_size_bytes": 6544631,
+      "sha256_checksum": "948fdd609b123223b74765ae5882191d066811a843ab6c9fa1e3709df0e1e52b",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "grid_bengaluru_urban_1000m": {
+      "dataset_id": "grid_bengaluru_urban_1000m",
+      "original_id": "grid_bengaluru_urban_1000m",
+      "file_path": "data\\processed\\grid_bengaluru_urban_1000m.gpkg",
+      "file_size_bytes": 569344,
+      "sha256_checksum": "aa11c33bd648ea07573d1421981cc63abf898d95cefb5516cd9e34ce41fc64a2",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "grid_features_bengaluru_urban_1000m": {
+      "dataset_id": "grid_features_bengaluru_urban_1000m",
+      "original_id": "grid_features_bengaluru_urban_1000m",
+      "file_path": "data\\processed\\grid_features_bengaluru_urban_1000m.parquet",
+      "file_size_bytes": 50412,
+      "sha256_checksum": "d5404934065182e050369d0f1352b931e06b010283f56231dfe698c97976b6ee",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "grid_mysuru_urban_1000m": {
+      "dataset_id": "grid_mysuru_urban_1000m",
+      "original_id": "grid_mysuru_urban_1000m",
+      "file_path": "data\\processed\\grid_mysuru_urban_1000m.geojson",
+      "file_size_bytes": 469289,
+      "sha256_checksum": "afb1542de2cc68bb2e70e86497b5bc8f0317e24f46e057f6e29557b21765add3",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "n12e077": {
+      "dataset_id": "n12e077",
+      "original_id": "n12e077",
+      "file_path": "data\\raw\\elevation\\srtm\\N12E077.hgt",
+      "file_size_bytes": 25934402,
+      "sha256_checksum": "d70ed4171e76a7296268016e903563027329086be8c6d89136de8582b9a5ed96",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "n12e077.srtmgl1.hgt": {
+      "dataset_id": "n12e077.srtmgl1.hgt",
+      "original_id": "n12e077.srtmgl1.hgt",
+      "file_path": "data\\raw\\elevation\\srtm\\N12E077.SRTMGL1.hgt.zip",
+      "file_size_bytes": 10071528,
+      "sha256_checksum": "37c8aafaa1acae395053cab5bd1d3766676897a7c08724590a1999d4caa28d76",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "n12e077.srtmgl1": {
+      "dataset_id": "n12e077.srtmgl1",
+      "original_id": "n12e077.srtmgl1",
+      "file_path": "data\\raw\\elevation\\srtm\\N12E077.SRTMGL1.tif",
+      "file_size_bytes": 8095151,
+      "sha256_checksum": "697aa24791cd02b43a5002fc5b7f6137434d74c420d5a7a0d6f58743b1595b15",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "n13e077": {
+      "dataset_id": "n13e077",
+      "original_id": "n13e077",
+      "file_path": "data\\raw\\elevation\\srtm\\N13E077.hgt",
+      "file_size_bytes": 25934402,
+      "sha256_checksum": "4a9c7d71333a6c83bf0d6afbf1ebfd47b8fcee8558f6f11c88b678ee63391627",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "n13e077.srtmgl1.hgt": {
+      "dataset_id": "n13e077.srtmgl1.hgt",
+      "original_id": "n13e077.srtmgl1.hgt",
+      "file_path": "data\\raw\\elevation\\srtm\\N13E077.SRTMGL1.hgt.zip",
+      "file_size_bytes": 7813126,
+      "sha256_checksum": "17d69dfe6a9c484a23844d81b682adb27fcf384f4f4cc27b06935079ef659790",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "n13e077.srtmgl1": {
+      "dataset_id": "n13e077.srtmgl1",
+      "original_id": "n13e077.srtmgl1",
+      "file_path": "data\\raw\\elevation\\srtm\\N13E077.SRTMGL1.tif",
+      "file_size_bytes": 6783967,
+      "sha256_checksum": "d9a8821fd3017803f3ab7086afd7ba60679aa2e7b4c1dde09395f649073d2fd6",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "srtmgl1_n12_n13_e077_bengaluru": {
+      "dataset_id": "srtmgl1_n12_n13_e077_bengaluru",
+      "original_id": "srtmgl1_n12_n13_e077_bengaluru",
+      "file_path": "data\\raw\\elevation\\srtm\\SRTMGL1_N12_N13_E077_Bengaluru.tif",
+      "file_size_bytes": 14876879,
+      "sha256_checksum": "ba45614211dbcbf686a47b36e19a32a9cfd82ce7c82a80bcc9e269a95d93946f",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "esa_worldcover_10m_2021_v200_n12e075_map": {
+      "dataset_id": "esa_worldcover_10m_2021_v200_n12e075_map",
+      "original_id": "esa_worldcover_10m_2021_v200_n12e075_map",
+      "file_path": "data\\raw\\land_cover\\ESA_WorldCover_10m_2021_v200_N12E075_Map.tif",
+      "file_size_bytes": 127650362,
+      "sha256_checksum": "f9269901e07d86c2e180d661d0e8924e3ee57dd589f7433b9874861b3c65a978",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Local / Ingested Dataset",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sentinel1_scene_registry_bengaluru": {
+      "dataset_id": "sentinel1_scene_registry_bengaluru",
+      "original_id": "sentinel1_scene_registry_bengaluru",
+      "file_path": "data\\processed\\sentinel1_scene_registry_bengaluru.parquet",
+      "file_size_bytes": 11806,
+      "sha256_checksum": "234d58d00cd56329e3db3543e282e59776eb7d118b4c3984646901126c28138b",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "European Space Agency (ESA) Copernicus Sentinel-1A / CDSE / ASF",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sentinel1_incident_comparison_bengaluru": {
+      "dataset_id": "sentinel1_incident_comparison_bengaluru",
+      "original_id": "sentinel1_incident_comparison_bengaluru",
+      "file_path": "data\\processed\\sentinel1_incident_comparison_bengaluru.parquet",
+      "file_size_bytes": 10503,
+      "sha256_checksum": "3a74099ac24b5220e20f79ebe52e0ca9e14e372109f9c37718ac5fe8419f4d53",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Copernicus Sentinel-1A & Ground Truth Inventory",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sentinel1_grid_features_bengaluru": {
+      "dataset_id": "sentinel1_grid_features_bengaluru",
+      "original_id": "sentinel1_grid_features_bengaluru",
+      "file_path": "data\\processed\\sentinel1_grid_features_bengaluru.parquet",
+      "file_size_bytes": 40711,
+      "sha256_checksum": "6675ede51339e813170d15f3d9d236c0da609cf3092ecddbab4601e8aecda8ec",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Sentinel-1A SAR Processing Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sentinel1_candidate_water_mask_bengaluru": {
+      "dataset_id": "sentinel1_candidate_water_mask_bengaluru",
+      "original_id": "sentinel1_candidate_water_mask_bengaluru",
+      "file_path": "data\\processed\\sentinel1_candidate_water_mask_bengaluru.tif",
+      "file_size_bytes": 374203,
+      "sha256_checksum": "cb874190a894ae244d4a2f18381d9af80125b7a5e906d8bfabf2a59331e82f75",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Sentinel-1A SAR & ESA WorldCover",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sentinel1_candidate_flood_change_mask_bengaluru": {
+      "dataset_id": "sentinel1_candidate_flood_change_mask_bengaluru",
+      "original_id": "sentinel1_candidate_flood_change_mask_bengaluru",
+      "file_path": "data\\processed\\sentinel1_candidate_flood_change_mask_bengaluru.tif",
+      "file_size_bytes": 336641,
+      "sha256_checksum": "f41f6b6de685f3b56314cdc2e96b18c0c3b50a1ba4e36b75b8bd748bfe29fa4f",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Copernicus Sentinel-1 / Synthetic Simulation Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "features_static_bengaluru": {
+      "dataset_id": "features_static_bengaluru",
+      "original_id": "features_static_bengaluru",
+      "file_path": "data\\processed\\features_static_bengaluru.parquet",
+      "file_size_bytes": 80989,
+      "sha256_checksum": "cbbdac220de4d03c30c52a0b86e9f322ea94ae950e2e7b7f4b9f280444eb9218",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "ESA WorldCover 10m & SRTM GL1 30m",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "features_rainfall_bengaluru": {
+      "dataset_id": "features_rainfall_bengaluru",
+      "original_id": "features_rainfall_bengaluru",
+      "file_path": "data\\processed\\features_rainfall_bengaluru.parquet",
+      "file_size_bytes": 72626,
+      "sha256_checksum": "a1084f34a160bb2c47d21fb00d29107658c7ddff33d2f0d9e3d391ecb42741dd",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "NASA GPM IMERG V07B Staged Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "features_integrated_bengaluru": {
+      "dataset_id": "features_integrated_bengaluru",
+      "original_id": "features_integrated_bengaluru",
+      "file_path": "data\\processed\\features_integrated_bengaluru.parquet",
+      "file_size_bytes": 165317,
+      "sha256_checksum": "e6c48c665a559293186a3484ed310fe5a6e333c1326027a5fdccf27667bb8f4f",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Multimodal Harmonization Engine (Phase 2B.1)",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "feature_registry": {
+      "dataset_id": "feature_registry",
+      "original_id": "feature_registry",
+      "file_path": "data\\processed\\feature_registry.json",
+      "file_size_bytes": 11710,
+      "sha256_checksum": "081c59607c38caa82b648c0af6d1330232c1d7d0ecb2e48da3639ead874ad49d",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 2B Feature Definition Registry",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "exploratory_risk_indicators_bengaluru": {
+      "dataset_id": "exploratory_risk_indicators_bengaluru",
+      "original_id": "exploratory_risk_indicators_bengaluru",
+      "file_path": "data\\processed\\exploratory_risk_indicators_bengaluru.parquet",
+      "file_size_bytes": 663821,
+      "sha256_checksum": "3b1e329891f07f5cf9c1f74987694411f86a3dae4d11df08b72649ffe928c902",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 2B.3 Multi-Criteria Scoring Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase3_model_features": {
+      "dataset_id": "phase3_model_features",
+      "original_id": "phase3_model_features",
+      "file_path": "data\\processed\\phase3_model_features.parquet",
+      "file_size_bytes": 275694,
+      "sha256_checksum": "fa56947820baf01bc67034342912843563665a8a25f35e5827327b92772cce79",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 3 Modeling Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase3_isolation_forest_results": {
+      "dataset_id": "phase3_isolation_forest_results",
+      "original_id": "phase3_isolation_forest_results",
+      "file_path": "data\\processed\\phase3_isolation_forest_results.parquet",
+      "file_size_bytes": 1092964,
+      "sha256_checksum": "6fc85f51c25e32a76b936e7857b5b6cd72718f3306f4f4e56d32671e8d3a6916",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 3 Modeling Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase3_mahalanobis_results": {
+      "dataset_id": "phase3_mahalanobis_results",
+      "original_id": "phase3_mahalanobis_results",
+      "file_path": "data\\processed\\phase3_mahalanobis_results.parquet",
+      "file_size_bytes": 728236,
+      "sha256_checksum": "0ccf10549bc75ec0ac03d4ec4735cf8852bafe9992b0d003eb8f12b4c412f65e",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 3 Modeling Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase3_mcda_results": {
+      "dataset_id": "phase3_mcda_results",
+      "original_id": "phase3_mcda_results",
+      "file_path": "data\\processed\\phase3_mcda_results.parquet",
+      "file_size_bytes": 894578,
+      "sha256_checksum": "2167e804e8c675ef3f109402054b779d69873994e8cf1f3ed90d8dc61e2b6a2d",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 3 Modeling Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase3_model_comparison": {
+      "dataset_id": "phase3_model_comparison",
+      "original_id": "phase3_model_comparison",
+      "file_path": "data\\processed\\phase3_model_comparison.parquet",
+      "file_size_bytes": 1487931,
+      "sha256_checksum": "59c33bbaf00126c364523797c8334de4c3f43119e9c565fefb1e3633589b1277",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Phase 3 Modeling Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "forecast_rainfall_bengaluru": {
+      "dataset_id": "forecast_rainfall_bengaluru",
+      "original_id": "forecast_rainfall_bengaluru",
+      "file_path": "data\\processed\\forecast_rainfall_bengaluru.parquet",
+      "file_size_bytes": 431406,
+      "sha256_checksum": "2a96d9106446c1ae8f29f837f74e32b50230c6218a30246ad4c87610e915bcf8",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Open-Meteo NWP ECMWF_IFS_GFS_Seamless (9 Anchors)",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "forecast_exposure_indicators_bengaluru": {
+      "dataset_id": "forecast_exposure_indicators_bengaluru",
+      "original_id": "forecast_exposure_indicators_bengaluru",
+      "file_path": "data\\processed\\forecast_exposure_indicators_bengaluru.parquet",
+      "file_size_bytes": 19204,
+      "sha256_checksum": "5cc021f802b8846d9767da435ada53233a226f702ef463eb9d55a4d137bde543",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Open-Meteo NWP Exposure Indicators",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "dynamic_risk_intelligence_bengaluru": {
+      "dataset_id": "dynamic_risk_intelligence_bengaluru",
+      "original_id": "dynamic_risk_intelligence_bengaluru",
+      "file_path": "data\\processed\\dynamic_risk_intelligence_bengaluru.parquet",
+      "file_size_bytes": 107397,
+      "sha256_checksum": "6081fd84222233531108f6700e20eb3a8c51b34bff01840af4631defb382fd69",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Urban Flood Risk Platform Phase 4.7 Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "flood_event_monitoring_log": {
+      "dataset_id": "flood_event_monitoring_log",
+      "original_id": "flood_event_monitoring_log",
+      "file_path": "data\\processed\\flood_event_monitoring_log.parquet",
+      "file_size_bytes": 12967,
+      "sha256_checksum": "0d205caba6fe5c145391eb2b422d0835cee48986fec8d5421e2c30d29c5bdb15",
+      "originating_manifest": "Phase 1-4 Core Manifest",
+      "source_provider": "Urban Flood Risk Platform Event Engine",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_archived_nwp_forecasts_bengaluru": {
+      "dataset_id": "phase5_archived_nwp_forecasts_bengaluru",
+      "original_id": "archived_nwp_forecasts_bengaluru",
+      "file_path": "data\\processed\\phase5_forecast_archive\\archived_nwp_forecasts_bengaluru.parquet",
+      "file_size_bytes": 620362,
+      "sha256_checksum": "e2dc657549dec3279e5c7d15e0b571b8c81135416d16a9e9e15843777d232b4b",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_independent_rainfall_observations_bengaluru": {
+      "dataset_id": "phase5_independent_rainfall_observations_bengaluru",
+      "original_id": "independent_rainfall_observations_bengaluru",
+      "file_path": "data\\processed\\phase5_rainfall_observations\\independent_rainfall_observations_bengaluru.parquet",
+      "file_size_bytes": 50521,
+      "sha256_checksum": "a9ecdb24b060400f4af3b466862851affa0537bee11288d485cc59ace6516db9",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_forecast_observation_matched_pairs": {
+      "dataset_id": "phase5_forecast_observation_matched_pairs",
+      "original_id": "forecast_observation_matched_pairs",
+      "file_path": "data\\processed\\phase5_forecast_observation_matches\\forecast_observation_matched_pairs.parquet",
+      "file_size_bytes": 1743615,
+      "sha256_checksum": "458a5c09bcc88dcf919e082980cb960e5f77c4fb8c065ea0ecd22c0e68a14b78",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_forecast_verification_metrics_by_lead_time": {
+      "dataset_id": "phase5_forecast_verification_metrics_by_lead_time",
+      "original_id": "forecast_verification_metrics_by_lead_time",
+      "file_path": "data\\processed\\phase5_forecast_verification\\forecast_verification_metrics_by_lead_time.parquet",
+      "file_size_bytes": 15622,
+      "sha256_checksum": "ea5b07f115861699ac3153f5cd94f190470b21077ea30cc1d5e4110b33f67a92",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_authentic_sar_scene_manifest": {
+      "dataset_id": "phase5_authentic_sar_scene_manifest",
+      "original_id": "authentic_sar_scene_manifest",
+      "file_path": "data\\processed\\phase5_sar_observations\\authentic_sar_scene_manifest.parquet",
+      "file_size_bytes": 10567,
+      "sha256_checksum": "87483121cae6c666ca5271c76c68276f34fabe5382ac3b54bd2a834d7d0a6006",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_independent_flood_evidence_records": {
+      "dataset_id": "phase5_independent_flood_evidence_records",
+      "original_id": "independent_flood_evidence_records",
+      "file_path": "data\\processed\\phase5_flood_evidence\\independent_flood_evidence_records.parquet",
+      "file_size_bytes": 11487,
+      "sha256_checksum": "94b1ba00851b13f7f044670c2650d039bbc8e2cc564262edf036be985feaf224",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_flood_validation_reference_matrix": {
+      "dataset_id": "phase5_flood_validation_reference_matrix",
+      "original_id": "flood_validation_reference_matrix",
+      "file_path": "data\\processed\\phase5_flood_validation_dataset\\flood_validation_reference_matrix.parquet",
+      "file_size_bytes": 48020,
+      "sha256_checksum": "1c87db6ee76b1e7a1000206c73da04efb850216ea2dd824c3c4d0b1af519608d",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_flood_evidence_evaluation_metrics": {
+      "dataset_id": "phase5_flood_evidence_evaluation_metrics",
+      "original_id": "flood_evidence_evaluation_metrics",
+      "file_path": "data\\processed\\phase5_flood_validation_dataset\\flood_evidence_evaluation_metrics.parquet",
+      "file_size_bytes": 8732,
+      "sha256_checksum": "a581e90ae9d44de76de5fe31091c3232b2e7ced362996ab09e2ffef9e0a284d0",
+      "originating_manifest": "Phase 5 Initial Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_archived_nwp_forecasts_bengaluru": {
+      "dataset_id": "phase5_final_archived_nwp_forecasts_bengaluru",
+      "original_id": "archived_nwp_forecasts_bengaluru",
+      "file_path": "data\\processed\\phase5_final\\forecast_archive\\archived_nwp_forecasts_bengaluru.parquet",
+      "file_size_bytes": 620362,
+      "sha256_checksum": "e2dc657549dec3279e5c7d15e0b571b8c81135416d16a9e9e15843777d232b4b",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_independent_rainfall_observations_bengaluru": {
+      "dataset_id": "phase5_final_independent_rainfall_observations_bengaluru",
+      "original_id": "independent_rainfall_observations_bengaluru",
+      "file_path": "data\\processed\\phase5_final\\rainfall_observations\\independent_rainfall_observations_bengaluru.parquet",
+      "file_size_bytes": 50521,
+      "sha256_checksum": "a9ecdb24b060400f4af3b466862851affa0537bee11288d485cc59ace6516db9",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_forecast_observation_matched_pairs": {
+      "dataset_id": "phase5_final_forecast_observation_matched_pairs",
+      "original_id": "forecast_observation_matched_pairs",
+      "file_path": "data\\processed\\phase5_final\\forecast_observation_matches\\forecast_observation_matched_pairs.parquet",
+      "file_size_bytes": 1743615,
+      "sha256_checksum": "458a5c09bcc88dcf919e082980cb960e5f77c4fb8c065ea0ecd22c0e68a14b78",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_forecast_verification_metrics_by_lead_time": {
+      "dataset_id": "phase5_final_forecast_verification_metrics_by_lead_time",
+      "original_id": "forecast_verification_metrics_by_lead_time",
+      "file_path": "data\\processed\\phase5_final\\forecast_verification\\forecast_verification_metrics_by_lead_time.parquet",
+      "file_size_bytes": 18076,
+      "sha256_checksum": "100be6fadac284e68caf5f191377fa0e2c6b8fc5d679a8182bba40565814b1e0",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_authentic_sar_scene_manifest": {
+      "dataset_id": "phase5_final_authentic_sar_scene_manifest",
+      "original_id": "authentic_sar_scene_manifest",
+      "file_path": "data\\processed\\phase5_final\\sar_observations\\authentic_sar_scene_manifest.parquet",
+      "file_size_bytes": 10567,
+      "sha256_checksum": "87483121cae6c666ca5271c76c68276f34fabe5382ac3b54bd2a834d7d0a6006",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_independent_flood_evidence_records": {
+      "dataset_id": "phase5_final_independent_flood_evidence_records",
+      "original_id": "independent_flood_evidence_records",
+      "file_path": "data\\processed\\phase5_final\\flood_evidence\\independent_flood_evidence_records.parquet",
+      "file_size_bytes": 11487,
+      "sha256_checksum": "94b1ba00851b13f7f044670c2650d039bbc8e2cc564262edf036be985feaf224",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_flood_validation_reference_matrix": {
+      "dataset_id": "phase5_final_flood_validation_reference_matrix",
+      "original_id": "flood_validation_reference_matrix",
+      "file_path": "data\\processed\\phase5_final\\flood_validation_dataset\\flood_validation_reference_matrix.parquet",
+      "file_size_bytes": 48020,
+      "sha256_checksum": "1c87db6ee76b1e7a1000206c73da04efb850216ea2dd824c3c4d0b1af519608d",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase5_final_flood_evidence_evaluation_metrics": {
+      "dataset_id": "phase5_final_flood_evidence_evaluation_metrics",
+      "original_id": "flood_evidence_evaluation_metrics",
+      "file_path": "data\\processed\\phase5_final\\flood_validation_dataset\\flood_evidence_evaluation_metrics.parquet",
+      "file_size_bytes": 11280,
+      "sha256_checksum": "152c46a6c89eed428afe74b6ea0be1cecd8d8001a33af572499bf3df6baa34d9",
+      "originating_manifest": "Phase 5 Final Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "reconciled_forecast_verification_metrics": {
+      "dataset_id": "reconciled_forecast_verification_metrics",
+      "original_id": "reconciled_forecast_verification_metrics",
+      "file_path": "data\\processed\\phase5_2\\reconciled_forecast_verification_metrics.parquet",
+      "file_size_bytes": 19696,
+      "sha256_checksum": "421b2fc27605cc4d73c96840031130e63b0ef59d63bcb9a31a97bbb3d09a939e",
+      "originating_manifest": "Phase 5.2 Closure Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "reconciled_flood_evidence_evaluation_metrics": {
+      "dataset_id": "reconciled_flood_evidence_evaluation_metrics",
+      "original_id": "reconciled_flood_evidence_evaluation_metrics",
+      "file_path": "data\\processed\\phase5_2\\reconciled_flood_evidence_evaluation_metrics.parquet",
+      "file_size_bytes": 12829,
+      "sha256_checksum": "d30fdcd87303fb1fe6b70178ac5fd0af635657b790c72be2340e5e8d9904e6e5",
+      "originating_manifest": "Phase 5.2 Closure Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "forecast_authenticity_audit_registry": {
+      "dataset_id": "forecast_authenticity_audit_registry",
+      "original_id": "forecast_authenticity_audit_registry",
+      "file_path": "data\\processed\\phase5_2\\forecast_authenticity_audit_registry.parquet",
+      "file_size_bytes": 10056,
+      "sha256_checksum": "96fc6cee53fc44d6025734d37fa5ae981276fbf90bcc73a2fd87ab6366aebdfb",
+      "originating_manifest": "Phase 5.2 Closure Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "nwp_acquisition_log": {
+      "dataset_id": "nwp_acquisition_log",
+      "original_id": "nwp_acquisition_log",
+      "file_path": "data\\processed\\phase6\\nwp\\nwp_acquisition_log.csv",
+      "file_size_bytes": 79873,
+      "sha256_checksum": "f5b1dba4f4379b1232dd848d1e8542fdde3a2e9240ed1f105c5a390de745d7b4",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "nwp_forecast_provenance": {
+      "dataset_id": "nwp_forecast_provenance",
+      "original_id": "nwp_forecast_provenance",
+      "file_path": "data\\processed\\phase6\\nwp\\nwp_forecast_provenance.parquet",
+      "file_size_bytes": 30182,
+      "sha256_checksum": "37454a1b0d48e587b2e2fa156ffb067a25305972e8a95f7ebbddb1e9a43c2f16",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "nwp_forecast_archive": {
+      "dataset_id": "nwp_forecast_archive",
+      "original_id": "nwp_forecast_archive",
+      "file_path": "data\\processed\\phase6\\nwp\\nwp_forecast_archive.parquet",
+      "file_size_bytes": 425480,
+      "sha256_checksum": "b723e35d60c183dc2b82f4e369395568f94076c3ea0f0a90d59034913bab46a5",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "rain_gauge_station_registry": {
+      "dataset_id": "rain_gauge_station_registry",
+      "original_id": "rain_gauge_station_registry",
+      "file_path": "data\\processed\\phase6\\ground_rainfall\\rain_gauge_station_registry.parquet",
+      "file_size_bytes": 9500,
+      "sha256_checksum": "62ba8438f73fdba7a1a60ed5167b1592953c945b8d671aaea386658215c6728d",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "ground_rainfall_observations": {
+      "dataset_id": "ground_rainfall_observations",
+      "original_id": "ground_rainfall_observations",
+      "file_path": "data\\processed\\phase6\\ground_rainfall\\ground_rainfall_observations.parquet",
+      "file_size_bytes": 11605,
+      "sha256_checksum": "c22523165f23936653eb643fc04632e705701293e4d85c5e3dacd2b2a7dce008",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "gauge_coverage_by_cell": {
+      "dataset_id": "gauge_coverage_by_cell",
+      "original_id": "gauge_coverage_by_cell",
+      "file_path": "data\\processed\\phase6\\ground_rainfall\\gauge_coverage_by_cell.parquet",
+      "file_size_bytes": 26667,
+      "sha256_checksum": "274cfa058bd31875295683d307b6c12b21c6656229e3711b12fa1d525f77b9ad",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "gfs_vs_gauge_validation_metrics": {
+      "dataset_id": "gfs_vs_gauge_validation_metrics",
+      "original_id": "gfs_vs_gauge_validation_metrics",
+      "file_path": "data\\processed\\phase6\\ground_rainfall\\gfs_vs_gauge_validation_metrics.parquet",
+      "file_size_bytes": 14737,
+      "sha256_checksum": "8d3077523e00c8d1fdf0dbba19a955bf10940b94941c2a8a548a231155152622",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "independent_flood_incident_inventory": {
+      "dataset_id": "independent_flood_incident_inventory",
+      "original_id": "independent_flood_incident_inventory",
+      "file_path": "data\\processed\\phase6\\flood_evidence\\independent_flood_incident_inventory.parquet",
+      "file_size_bytes": 14648,
+      "sha256_checksum": "733a99293a1cbc5f9b85798b34786808b9b91e3bc0fe2f31b32eaeafa5a80c61",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "flood_validation_ground_truth_matrix": {
+      "dataset_id": "flood_validation_ground_truth_matrix",
+      "original_id": "flood_validation_ground_truth_matrix",
+      "file_path": "data\\processed\\phase6\\flood_evidence\\flood_validation_ground_truth_matrix.parquet",
+      "file_size_bytes": 27050,
+      "sha256_checksum": "7c774f817f226c6503d5a674d9d8f9f63136a69f6162b65fa9ddce6b5f9f4378",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "flood_evidence_gate_audit": {
+      "dataset_id": "flood_evidence_gate_audit",
+      "original_id": "flood_evidence_gate_audit",
+      "file_path": "data\\processed\\phase6\\flood_evidence\\flood_evidence_gate_audit.parquet",
+      "file_size_bytes": 10219,
+      "sha256_checksum": "07eaae3f0e8cf7b2ab9a60087dbf76a4dc305b08d8d8d679e89e0c479e2ee068",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sar_scene_audit_registry": {
+      "dataset_id": "sar_scene_audit_registry",
+      "original_id": "sar_scene_audit_registry",
+      "file_path": "data\\processed\\phase6\\sar\\sar_scene_audit_registry.parquet",
+      "file_size_bytes": 11340,
+      "sha256_checksum": "42b076e90c27b929f01a72d4c0f195f982ede1cd0fe8f9b46273a224b409b90f",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sar_flood_signature_features": {
+      "dataset_id": "sar_flood_signature_features",
+      "original_id": "sar_flood_signature_features",
+      "file_path": "data\\processed\\phase6\\sar\\sar_flood_signature_features.parquet",
+      "file_size_bytes": 31604,
+      "sha256_checksum": "47586e1b55fdfc180d45c5442d27bf66c3a25e83071a73f307950b3717662b7e",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "sar_ground_truth_cross_validation": {
+      "dataset_id": "sar_ground_truth_cross_validation",
+      "original_id": "sar_ground_truth_cross_validation",
+      "file_path": "data\\processed\\phase6\\sar\\sar_ground_truth_cross_validation.parquet",
+      "file_size_bytes": 9789,
+      "sha256_checksum": "8dbca740f5fc034b821bc1f6ca716ee82dce13f3cb5a73597173fe6d82ff42f4",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "topographic_routing_static_features": {
+      "dataset_id": "topographic_routing_static_features",
+      "original_id": "topographic_routing_static_features",
+      "file_path": "data\\processed\\phase6\\hydrology\\topographic_routing_static_features.parquet",
+      "file_size_bytes": 55398,
+      "sha256_checksum": "45b49a8cce9f2e864ee07380c1b94165478821e5d30b98758abccf4366cb8e7e",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "dynamic_hydrological_inundation_potential": {
+      "dataset_id": "dynamic_hydrological_inundation_potential",
+      "original_id": "dynamic_hydrological_inundation_potential",
+      "file_path": "data\\processed\\phase6\\hydrology\\dynamic_hydrological_inundation_potential.parquet",
+      "file_size_bytes": 233899,
+      "sha256_checksum": "bd69b36ac35d5500e756fa23a75ec72d9f1e60311432d4d236ec0f2fb2c28e3a",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "hydrology_ground_truth_validation": {
+      "dataset_id": "hydrology_ground_truth_validation",
+      "original_id": "hydrology_ground_truth_validation",
+      "file_path": "data\\processed\\phase6\\hydrology\\hydrology_ground_truth_validation.parquet",
+      "file_size_bytes": 48609,
+      "sha256_checksum": "d97f29584d29f943cb7fbaa9f68b1e85dcae5baf26a9a005887ed74bda331716",
+      "originating_manifest": "Phase 6 Master Manifest",
+      "source_provider": "Project Pipeline",
+      "validation_status": "AUTHENTIC_FROZEN_BASELINE"
+    },
+    "phase7_forecast_error_registry": {
+      "dataset_id": "phase7_forecast_error_registry",
+      "original_id": "phase7_forecast_error_registry",
+      "file_path": "data\\processed\\phase7\\nwp\\phase7_forecast_error_registry.parquet",
+      "file_size_bytes": 23807,
+      "sha256_checksum": "87acf179f057f89f10e99ce7015e08b4349adb260cec355be0b003787e429196",
+      "originating_manifest": "Phase 7 Verification & Final Manifest",
+      "source_provider": "NOAA GFS 0.25-deg + IMD/KSNDMC Ground Rain Gauges",
+      "description": "Reconstructed 256 paired forecast-observation evaluation records across 16 primary stations and 16 dates",
+      "record_count": 256,
+      "validation_status": "PHASE_7_VERIFIED_OUTPUT"
+    },
+    "phase7_forecast_verification_metrics": {
+      "dataset_id": "phase7_forecast_verification_metrics",
+      "original_id": "phase7_forecast_verification_metrics",
+      "file_path": "data\\processed\\phase7\\verification\\phase7_forecast_verification_metrics.parquet",
+      "file_size_bytes": 7702,
+      "sha256_checksum": "59f56986e93230344bac03c9221ca0cdd28cc855af6ecc68265028419d9c02aa",
+      "originating_manifest": "Phase 7 Verification & Final Manifest",
+      "source_provider": "Phase 7 Verification Engine",
+      "description": "Multi-threshold contingency metrics (2.5mm, 15.6mm, 35.5mm, 64.5mm, 115.6mm) and continuous skill statistics",
+      "record_count": 5,
+      "validation_status": "PHASE_7_VERIFIED_OUTPUT"
+    },
+    "phase7_flood_evidence_assessment": {
+      "dataset_id": "phase7_flood_evidence_assessment",
+      "original_id": "phase7_flood_evidence_assessment",
+      "file_path": "data\\processed\\phase7\\flood_evidence\\phase7_flood_evidence_assessment.parquet",
+      "file_size_bytes": 28475,
+      "sha256_checksum": "56f14142b88875db7eb14192cb0e34a18e2556e42161092837e5f9464ac4360a",
+      "originating_manifest": "Phase 7 Verification & Final Manifest",
+      "source_provider": "Multi-Source Official, Civic & Geotagged Resident Records",
+      "description": "Reconstructed 1,170-cell ground truth reference matrix with tier classifications (13 pos, 7 neg, 1,150 unobserved)",
+      "record_count": 1170,
+      "validation_status": "PHASE_7_VERIFIED_OUTPUT"
+    },
+    "phase7_sar_evidence_comparison": {
+      "dataset_id": "phase7_sar_evidence_comparison",
+      "original_id": "phase7_sar_evidence_comparison",
+      "file_path": "data\\processed\\phase7\\sar_validation\\phase7_sar_evidence_comparison.parquet",
+      "file_size_bytes": 10210,
+      "sha256_checksum": "954fa562cb1e5db158b2409f4af3503f3b66c031b6d9dc420bedfbdf7c0899f9",
+      "originating_manifest": "Phase 7 Verification & Final Manifest",
+      "source_provider": "Copernicus Sentinel-1A C-SAR (Orbit 165 Descending)",
+      "description": "Deconstructed physical radar regimes and ground truth cross-validation for 20 verified validation sites",
+      "record_count": 20,
+      "validation_status": "PHASE_7_VERIFIED_OUTPUT"
+    },
+    "phase7_hydrology_comparison": {
+      "dataset_id": "phase7_hydrology_comparison",
+      "original_id": "phase7_hydrology_comparison",
+      "file_path": "data\\processed\\phase7\\hydrology\\phase7_hydrology_comparison.parquet",
+      "file_size_bytes": 69335,
+      "sha256_checksum": "10820bb79d5d48322e18620d3adc8badd7b134b709649845b34244a22b5942cd",
+      "originating_manifest": "Phase 7 Verification & Final Manifest",
+      "source_provider": "MERIT Hydro / SRTM 1-arcsecond DEM + Phase 7 Routing Engine",
+      "description": "Terrain depression sensitivity comparison (unconditioned vs priority-flood conditioned) and static susceptibility variants",
+      "record_count": 1170,
+      "validation_status": "PHASE_7_VERIFIED_OUTPUT"
+    }
+  }
+}

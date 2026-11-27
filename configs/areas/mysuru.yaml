@@ -1,0 +1,35 @@
+study_area:
+  id: mysuru_urban
+  name: Mysuru Urban
+  country: India
+  admin_level: district
+
+  bbox_wgs84:
+    west: 76.55
+    south: 12.25
+    east: 76.75
+    north: 12.40
+
+  boundary_file: data/external/boundaries/mysuru_urban.geojson
+
+  boundary_status: pending_authoritative_boundary
+  boundary_notes: >
+    Mysuru district/urban extent configuration demonstrating geography-independent engine scalability.
+
+spatial:
+  analysis_crs: EPSG:6933
+  grid_size_m: 1000
+  grid_scheme: global_equal_area_square
+
+time:
+  timezone: Asia/Kolkata
+  canonical_timestamp: UTC
+  rainfall_aggregation: daily
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  external: data/external
+  reports: reports
+

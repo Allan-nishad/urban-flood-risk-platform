@@ -1,0 +1,29 @@
+{
+  "manifest_name": "Phase 6A Authentic NOAA GFS NWP Manifest",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells, EPSG:6933)",
+  "source": "NOAA Global Forecast System (GFS) 0.25-deg AWS Open Data (s3://noaa-gfs-bdp-pds)",
+  "created_at_utc": "2026-11-05T16:48:23.470388Z",
+  "datasets": {
+    "nwp_acquisition_log": {
+      "file_path": "data/processed/phase6/nwp\\nwp_acquisition_log.csv",
+      "file_size_bytes": 79873,
+      "sha256_checksum": "f5b1dba4f4379b1232dd848d1e8542fdde3a2e9240ed1f105c5a390de745d7b4",
+      "description": "Log of NOAA GFS byte-range acquisition attempts and HTTP status",
+      "record_count": 170
+    },
+    "nwp_forecast_provenance": {
+      "file_path": "data/processed/phase6/nwp\\nwp_forecast_provenance.parquet",
+      "file_size_bytes": 30182,
+      "sha256_checksum": "37454a1b0d48e587b2e2fa156ffb067a25305972e8a95f7ebbddb1e9a43c2f16",
+      "description": "ecCodes decoded message provenance and WMO GRIB2 headers",
+      "record_count": 340
+    },
+    "nwp_forecast_archive": {
+      "file_path": "data/processed/phase6/nwp\\nwp_forecast_archive.parquet",
+      "file_size_bytes": 425480,
+      "sha256_checksum": "b723e35d60c183dc2b82f4e369395568f94076c3ea0f0a90d59034913bab46a5",
+      "description": "Cell-mapped authentic NOAA GFS forecast rainfall time series across study domain",
+      "record_count": 198900
+    }
+  }
+}

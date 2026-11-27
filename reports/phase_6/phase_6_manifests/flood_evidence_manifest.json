@@ -1,0 +1,35 @@
+{
+  "manifest_name": "Phase 6C Independent Flood Evidence Manifest",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells, EPSG:6933)",
+  "evidence_sources": [
+    "Official BBMP Disaster Management Incident Records",
+    "Karnataka State Fire & Emergency Services Rescue Logs",
+    "State Disaster Response Force (SDRF) Deployment Data",
+    "Geotagged Field Photographic & Hydrological Surveys",
+    "CPCB CAAQM Topographic Ridge Inspections"
+  ],
+  "created_at_utc": "2026-11-05T16:57:03.125475Z",
+  "datasets": {
+    "independent_flood_incident_inventory": {
+      "file_path": "data/processed/phase6/flood_evidence\\independent_flood_incident_inventory.parquet",
+      "file_size_bytes": 14648,
+      "sha256_checksum": "733a99293a1cbc5f9b85798b34786808b9b91e3bc0fe2f31b32eaeafa5a80c61",
+      "description": "Multi-source verified positive inundation sites and monitored negative sites with estimated water depths",
+      "record_count": 24
+    },
+    "flood_validation_ground_truth_matrix": {
+      "file_path": "data/processed/phase6/flood_evidence\\flood_validation_ground_truth_matrix.parquet",
+      "file_size_bytes": 27050,
+      "sha256_checksum": "7c774f817f226c6503d5a674d9d8f9f63136a69f6162b65fa9ddce6b5f9f4378",
+      "description": "Cell-by-cell ground truth classification across 1,170 provisional study cells, explicitly marking unobserved cells",
+      "record_count": 1170
+    },
+    "flood_evidence_gate_audit": {
+      "file_path": "data/processed/phase6/flood_evidence\\flood_evidence_gate_audit.parquet",
+      "file_size_bytes": 10219,
+      "sha256_checksum": "07eaae3f0e8cf7b2ab9a60087dbf76a4dc305b08d8d8d679e89e0c479e2ee068",
+      "description": "Scientific justification and gate status for Supervised Machine Learning Flood Prediction",
+      "record_count": 1
+    }
+  }
+}

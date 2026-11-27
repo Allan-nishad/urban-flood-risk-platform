@@ -1,0 +1,30 @@
+{
+  "manifest_name": "Phase 6D Authentic Sentinel-1 SAR Manifest",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells, EPSG:6933)",
+  "provider": "European Space Agency (ESA) Copernicus Data Space Ecosystem (CDSE)",
+  "sensor": "Sentinel-1A C-SAR (Interferometric Wide, Relative Orbit 165 Descending)",
+  "created_at_utc": "2026-11-05T17:00:06.304491Z",
+  "datasets": {
+    "sar_scene_audit_registry": {
+      "file_path": "data/processed/phase6/sar\\sar_scene_audit_registry.parquet",
+      "file_size_bytes": 11340,
+      "sha256_checksum": "42b076e90c27b929f01a72d4c0f195f982ede1cd0fe8f9b46273a224b409b90f",
+      "description": "Copernicus Data Space Ecosystem verified scene audit records for pre-event, co-event, and post-event passes",
+      "record_count": 3
+    },
+    "sar_flood_signature_features": {
+      "file_path": "data/processed/phase6/sar\\sar_flood_signature_features.parquet",
+      "file_size_bytes": 31604,
+      "sha256_checksum": "47586e1b55fdfc180d45c5442d27bf66c3a25e83071a73f307950b3717662b7e",
+      "description": "Cell-level radiometric backscatter, flood change fractions, and double-bounce detection across 1,170 cells",
+      "record_count": 1170
+    },
+    "sar_ground_truth_cross_validation": {
+      "file_path": "data/processed/phase6/sar\\sar_ground_truth_cross_validation.parquet",
+      "file_size_bytes": 9789,
+      "sha256_checksum": "8dbca740f5fc034b821bc1f6ca716ee82dce13f3cb5a73597173fe6d82ff42f4",
+      "description": "Cross-validation of SAR flood signatures against Stage 6C ground truth evidence",
+      "record_count": 20
+    }
+  }
+}

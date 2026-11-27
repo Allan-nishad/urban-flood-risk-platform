@@ -1,0 +1,345 @@
+<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
+<qgis projectname="AI-Based Urban Flood Risk Intelligence Platform - Bengaluru" version="3.28.0-Firenze">
+  <title>Bengaluru Urban Flood Risk Intelligence Platform</title>
+  <autotransaction active="0"/>
+  <evaluateDefaultValues active="0"/>
+  <trust active="0"/>
+  <projectCrs>
+    <spatialrefsys nativeFormat="Wkt">
+      <wkt>GEOGCRS["WGS 84",ENSEMBLE["World Geodetic System 1984 ensemble",MEMBER["World Geodetic System 1984 (Transit)"],MEMBER["World Geodetic System 1984 (G730)"],MEMBER["World Geodetic System 1984 (G873)"],MEMBER["World Geodetic System 1984 (G1150)"],MEMBER["World Geodetic System 1984 (G1674)"],MEMBER["World Geodetic System 1984 (G1762)"],MEMBER["World Geodetic System 1984 (G2139)"],ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]],ENSEMBLEACCURACY[2.0]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["Horizontal component of 3D system."],AREA["World."],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+      <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+      <srsid>3452</srsid>
+      <srid>4326</srid>
+      <authid>EPSG:4326</authid>
+      <description>WGS 84</description>
+      <projectionacronym>longlat</projectionacronym>
+      <ellipsoidacronym>EPSG:7030</ellipsoidacronym>
+      <geographic>true</geographic>
+    </spatialrefsys>
+  </projectCrs>
+  <layer-tree-group>
+    <customproperties>
+      <Option/>
+    </customproperties>
+    
+    <!-- Group F: Weather and Rainfall -->
+    <layer-tree-group name="F. Weather and Rainfall" expanded="1" checked="Qt::Checked">
+      <layer-tree-layer id="rain_gauges_layer" name="Rain Gauge Stations (21 Stations)" source="./rain_gauge_stations.gpkg|layername=rain_gauge_stations" providerKey="ogr" expanded="1" checked="Qt::Checked"/>
+      <layer-tree-layer id="flood_incidents_layer" name="Historical Deluge Incidents (24 Records / 17 Locations)" source="./flood_incident_points.gpkg|layername=flood_incident_points" providerKey="ogr" expanded="1" checked="Qt::Checked"/>
+    </layer-tree-group>
+
+    <!-- Group E: Risk Assessment -->
+    <layer-tree-group name="E. Risk Assessment" expanded="1" checked="Qt::Checked">
+      <layer-tree-layer id="dynamic_risk_layer" name="Uncalibrated Flood-Risk Prioritisation Index — Not Flood Probability" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="1" checked="Qt::Checked"/>
+      <layer-tree-layer id="static_susceptibility_layer" name="Static Multi-Criteria Susceptibility (MCDA)" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="0" checked="Qt::Unchecked"/>
+    </layer-tree-group>
+
+    <!-- Group D: Flood Evidence -->
+    <layer-tree-group name="D. Flood Evidence &amp; Ground Truth" expanded="1" checked="Qt::Checked">
+      <layer-tree-layer id="flood_ground_truth_layer" name="Ground Truth Classification (13 Pos / 7 Proxy / 1,150 Unobserved)" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="1" checked="Qt::Unchecked"/>
+    </layer-tree-group>
+
+    <!-- Group C: Hydrology -->
+    <layer-tree-group name="C. Hydrology &amp; Catchment Drainage" expanded="1" checked="Qt::Checked">
+      <layer-tree-layer id="depression_sinks_layer" name="19 DEM-Derived Depression Sinks (Depth up to 4.85m)" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="1" checked="Qt::Checked"/>
+      <layer-tree-layer id="flow_accumulation_layer" name="D8 Catchment Flow Accumulation (km²)" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="1" checked="Qt::Unchecked"/>
+      <layer-tree-layer id="twi_layer" name="Topographic Wetness Index (SAGA TWI: 10.08 - 19.04)" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="0" checked="Qt::Unchecked"/>
+      <layer-tree-layer id="water_mask_layer" name="Permanent Lake &amp; Water Mask (Sentinel-1)" source="../../data/processed/sentinel1_candidate_water_mask_bengaluru.tif" providerKey="gdal" expanded="1" checked="Qt::Checked"/>
+    </layer-tree-group>
+
+    <!-- Group B: Terrain & Land Cover -->
+    <layer-tree-group name="B. Terrain &amp; Land Cover" expanded="1" checked="Qt::Checked">
+      <layer-tree-layer id="srtm_dem_layer" name="NASA SRTM 30m Digital Elevation Model" source="../../data/raw/elevation/srtm/SRTMGL1_N12_N13_E077_Bengaluru.tif" providerKey="gdal" expanded="1" checked="Qt::Checked"/>
+      <layer-tree-layer id="esa_landcover_layer" name="ESA WorldCover 10m Land Cover (2021)" source="../../data/raw/land_cover/ESA_WorldCover_10m_2021_v200_N12E075_Map.tif" providerKey="gdal" expanded="0" checked="Qt::Unchecked"/>
+      <layer-tree-layer id="sar_backscatter_layer" name="Sentinel-1A SAR Co-Flood Backscatter (2022-09-05)" source="../../data/raw/weather/sentinel1/S1A_IW_GRDH_20220905_VV_bengaluru.tif" providerKey="gdal" expanded="0" checked="Qt::Unchecked"/>
+    </layer-tree-group>
+
+    <!-- Group A: Study Area -->
+    <layer-tree-group name="A. Study Area &amp; Grid" expanded="1" checked="Qt::Checked">
+      <layer-tree-layer id="study_boundary_layer" name="Study Extent Boundary Outline (1,170 km²)" source="./study_extent_outline.gpkg|layername=study_extent_outline" providerKey="ogr" expanded="1" checked="Qt::Checked"/>
+      <layer-tree-layer id="grid_mesh_wgs84_layer" name="Bengaluru 1-km Grid Mesh (WGS 84)" source="./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84" providerKey="ogr" expanded="1" checked="Qt::Checked"/>
+      <layer-tree-layer id="grid_native_6933_layer" name="Bengaluru 1-km Equal-Area Grid (Native EPSG:6933)" source="./bengaluru_study_grid.gpkg|layername=bengaluru_study_grid" providerKey="ogr" expanded="0" checked="Qt::Unchecked"/>
+    </layer-tree-group>
+  </layer-tree-group>
+
+  <mapcanvas name="theMapCanvas">
+    <units>degrees</units>
+    <extent>
+      <xmin>77.410</xmin>
+      <ymin>12.820</ymin>
+      <xmax>77.780</xmax>
+      <ymax>13.180</ymax>
+    </extent>
+    <rotation>0</rotation>
+    <destinationsrs>
+      <spatialrefsys nativeFormat="Wkt">
+        <wkt>GEOGCRS["WGS 84",ENSEMBLE["World Geodetic System 1984 ensemble",MEMBER["World Geodetic System 1984 (Transit)"],MEMBER["World Geodetic System 1984 (G730)"],MEMBER["World Geodetic System 1984 (G873)"],MEMBER["World Geodetic System 1984 (G1150)"],MEMBER["World Geodetic System 1984 (G1674)"],MEMBER["World Geodetic System 1984 (G1762)"],MEMBER["World Geodetic System 1984 (G2139)"],ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]],ENSEMBLEACCURACY[2.0]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],USAGE[SCOPE["Horizontal component of 3D system."],AREA["World."],BBOX[-90,-180,90,180]],ID["EPSG",4326]]</wkt>
+        <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+        <srsid>3452</srsid>
+        <srid>4326</srid>
+        <authid>EPSG:4326</authid>
+        <description>WGS 84</description>
+      </spatialrefsys>
+    </destinationsrs>
+  </mapcanvas>
+
+  <projectlayers>
+    <!-- 1. Rain Gauges -->
+    <maplayer type="vector" id="rain_gauges_layer" name="Rain Gauge Stations (21 Stations)" geometry="Point">
+      <datasource>./rain_gauge_stations.gpkg|layername=rain_gauge_stations</datasource>
+      <keywordList><value></value></keywordList>
+      <layername>Rain Gauge Stations (21 Stations)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="singleSymbol">
+        <symbols>
+          <symbol type="marker" name="0" alpha="1">
+            <layer class="SimpleMarker" locked="0" pass="0">
+              <prop k="name" v="triangle"/>
+              <prop k="color" v="37,99,235,255"/>
+              <prop k="size" v="4.5"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_width" v="0.5"/>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 2. Flood Incidents -->
+    <maplayer type="vector" id="flood_incidents_layer" name="Historical Deluge Incidents (24 Records / 17 Locations)" geometry="Point">
+      <datasource>./flood_incident_points.gpkg|layername=flood_incident_points</datasource>
+      <layername>Historical Deluge Incidents (24 Records / 17 Locations)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="singleSymbol">
+        <symbols>
+          <symbol type="marker" name="0" alpha="1">
+            <layer class="SimpleMarker" locked="0" pass="0">
+              <prop k="name" v="circle"/>
+              <prop k="color" v="220,38,38,255"/>
+              <prop k="size" v="4.0"/>
+              <prop k="outline_color" v="255,255,255,255"/>
+              <prop k="outline_width" v="0.8"/>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 3. Dynamic Risk Prioritisation -->
+    <maplayer type="vector" id="dynamic_risk_layer" name="Uncalibrated Flood-Risk Prioritisation Index — Not Flood Probability" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>Uncalibrated Flood-Risk Prioritisation Index — Not Flood Probability</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="graduatedSymbol" attr="dynamic_risk_prioritization_score" graduatedMethod="GraduatedColor">
+        <ranges>
+          <range lower="0.0" upper="0.30" symbol="0" label="Low Prioritisation (&lt; 0.30)"/>
+          <range lower="0.30" upper="0.55" symbol="1" label="Moderate Prioritisation (0.30 - 0.55)"/>
+          <range lower="0.55" upper="0.75" symbol="2" label="High Prioritisation (0.55 - 0.75)"/>
+          <range lower="0.75" upper="1.00" symbol="3" label="Severe Prioritisation (&gt; 0.75)"/>
+        </ranges>
+        <symbols>
+          <symbol type="fill" name="0" alpha="0.85"><layer class="SimpleFill"><prop k="color" v="254,240,217,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="1" alpha="0.85"><layer class="SimpleFill"><prop k="color" v="253,204,138,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="2" alpha="0.85"><layer class="SimpleFill"><prop k="color" v="252,141,89,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="3" alpha="0.85"><layer class="SimpleFill"><prop k="color" v="215,48,31,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 4. Static Susceptibility -->
+    <maplayer type="vector" id="static_susceptibility_layer" name="Static Multi-Criteria Susceptibility (MCDA)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>Static Multi-Criteria Susceptibility (MCDA)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="graduatedSymbol" attr="static_susceptibility_score">
+        <ranges>
+          <range lower="0.0" upper="0.4" symbol="0" label="Low Topographic Susceptibility"/>
+          <range lower="0.4" upper="0.7" symbol="1" label="Moderate Topographic Susceptibility"/>
+          <range lower="0.7" upper="1.0" symbol="2" label="High Topographic Susceptibility"/>
+        </ranges>
+        <symbols>
+          <symbol type="fill" name="0" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="237,248,233,255"/><prop k="outline_color" v="100,116,139,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="1" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="116,196,118,255"/><prop k="outline_color" v="100,116,139,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="2" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="35,139,69,255"/><prop k="outline_color" v="100,116,139,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 5. Flood Ground Truth Matrix -->
+    <maplayer type="vector" id="flood_ground_truth_layer" name="Ground Truth Classification (13 Pos / 7 Proxy / 1,150 Unobserved)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>Ground Truth Classification (13 Pos / 7 Proxy / 1,150 Unobserved)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="categorizedSymbol" attr="observation_status">
+        <categories>
+          <category value="VERIFIED_POSITIVE" symbol="0" label="Verified Positive Flood Cell (13 Cells, 1.11%)"/>
+          <category value="VERIFIED_NEGATIVE" symbol="1" label="Monitored Negative Proxy Cell (7 Cells, 0.60%)"/>
+          <category value="UNOBSERVED_DOMAIN_CELL" symbol="2" label="Unobserved Domain (1,150 Cells, 98.29%)"/>
+        </categories>
+        <symbols>
+          <symbol type="fill" name="0" alpha="0.9"><layer class="SimpleFill"><prop k="color" v="220,38,38,200"/><prop k="outline_color" v="153,27,27,255"/><prop k="outline_width" v="1.2"/></layer></symbol>
+          <symbol type="fill" name="1" alpha="0.9"><layer class="SimpleFill"><prop k="color" v="22,163,74,200"/><prop k="outline_color" v="20,83,45,255"/><prop k="outline_width" v="1.2"/></layer></symbol>
+          <symbol type="fill" name="2" alpha="0.4"><layer class="SimpleFill"><prop k="color" v="241,245,249,100"/><prop k="outline_color" v="148,163,184,150"/><prop k="outline_width" v="0.3"/></layer></symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 6. 19 Depression Sinks -->
+    <maplayer type="vector" id="depression_sinks_layer" name="19 DEM-Derived Depression Sinks (Depth up to 4.85m)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>19 DEM-Derived Depression Sinks (Depth up to 4.85m)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="ruleKey">
+        <rules>
+          <rule filter="&quot;is_closed_sink&quot; = 1" symbol="0" label="19 Retention Sinks (Max Depth 4.85m)"/>
+        </rules>
+        <symbols>
+          <symbol type="fill" name="0" alpha="0.9">
+            <layer class="SimpleFill">
+              <prop k="color" v="185,28,28,80"/>
+              <prop k="outline_color" v="185,28,28,255"/>
+              <prop k="outline_width" v="1.5"/>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 7. Flow Accumulation -->
+    <maplayer type="vector" id="flow_accumulation_layer" name="D8 Catchment Flow Accumulation (km²)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>D8 Catchment Flow Accumulation (km²)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="graduatedSymbol" attr="upstream_contributing_area_km2">
+        <ranges>
+          <range lower="0" upper="5" symbol="0" label="Headwater (&lt; 5 km²)"/>
+          <range lower="5" upper="20" symbol="1" label="Mid-Slope Swale (5 - 20 km²)"/>
+          <range lower="20" upper="50" symbol="2" label="Major Valley Floor (20 - 50 km²)"/>
+          <range lower="50" upper="200" symbol="3" label="Regional Trunk Drainage (&gt; 50 km²)"/>
+        </ranges>
+        <symbols>
+          <symbol type="fill" name="0" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="241,245,249,255"/><prop k="outline_color" v="203,213,225,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="1" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="96,165,250,255"/><prop k="outline_color" v="203,213,225,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="2" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="37,99,235,255"/><prop k="outline_color" v="203,213,225,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="3" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="30,58,138,255"/><prop k="outline_color" v="203,213,225,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 8. Topographic Wetness Index -->
+    <maplayer type="vector" id="twi_layer" name="Topographic Wetness Index (SAGA TWI: 10.08 - 19.04)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>Topographic Wetness Index (SAGA TWI: 10.08 - 19.04)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="graduatedSymbol" attr="topographic_wetness_index">
+        <ranges>
+          <range lower="10.0" upper="12.0" symbol="0" label="Ridge Crest / Steep Slope (10 - 12)"/>
+          <range lower="12.0" upper="14.5" symbol="1" label="Mid-Slope Infiltration (12 - 14.5)"/>
+          <range lower="14.5" upper="19.5" symbol="2" label="Valley Bottom Convergence (&gt; 14.5)"/>
+        </ranges>
+        <symbols>
+          <symbol type="fill" name="0" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="240,249,232,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="1" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="123,204,196,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+          <symbol type="fill" name="2" alpha="0.8"><layer class="SimpleFill"><prop k="color" v="8,104,172,255"/><prop k="outline_color" v="148,163,184,100"/><prop k="outline_width" v="0.2"/></layer></symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 9. Water Mask Raster -->
+    <maplayer type="raster" id="water_mask_layer" name="Permanent Lake &amp; Water Mask (Sentinel-1)">
+      <datasource>../../data/processed/sentinel1_candidate_water_mask_bengaluru.tif</datasource>
+      <layername>Permanent Lake &amp; Water Mask (Sentinel-1)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider>gdal</provider>
+    </maplayer>
+
+    <!-- 10. SRTM DEM Raster -->
+    <maplayer type="raster" id="srtm_dem_layer" name="NASA SRTM 30m Digital Elevation Model">
+      <datasource>../../data/raw/elevation/srtm/SRTMGL1_N12_N13_E077_Bengaluru.tif</datasource>
+      <layername>NASA SRTM 30m Digital Elevation Model</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider>gdal</provider>
+    </maplayer>
+
+    <!-- 11. ESA Land Cover Raster -->
+    <maplayer type="raster" id="esa_landcover_layer" name="ESA WorldCover 10m Land Cover (2021)">
+      <datasource>../../data/raw/land_cover/ESA_WorldCover_10m_2021_v200_N12E075_Map.tif</datasource>
+      <layername>ESA WorldCover 10m Land Cover (2021)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider>gdal</provider>
+    </maplayer>
+
+    <!-- 12. Sentinel-1 SAR Backscatter -->
+    <maplayer type="raster" id="sar_backscatter_layer" name="Sentinel-1A SAR Co-Flood Backscatter (2022-09-05)">
+      <datasource>../../data/raw/weather/sentinel1/S1A_IW_GRDH_20220905_VV_bengaluru.tif</datasource>
+      <layername>Sentinel-1A SAR Co-Flood Backscatter (2022-09-05)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider>gdal</provider>
+    </maplayer>
+
+    <!-- 13. Study Extent Boundary Outline -->
+    <maplayer type="vector" id="study_boundary_layer" name="Study Extent Boundary Outline (1,170 km²)" geometry="Polygon">
+      <datasource>./study_extent_outline.gpkg|layername=study_extent_outline</datasource>
+      <layername>Study Extent Boundary Outline (1,170 km²)</layername>
+      <srs><spatialrefsys><authid>EPSG:6933</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="singleSymbol">
+        <symbols>
+          <symbol type="fill" name="0" alpha="1">
+            <layer class="SimpleFill">
+              <prop k="color" v="0,0,0,0"/>
+              <prop k="outline_color" v="15,23,42,255"/>
+              <prop k="outline_width" v="0.8"/>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 14. Grid Mesh WGS84 -->
+    <maplayer type="vector" id="grid_mesh_wgs84_layer" name="Bengaluru 1-km Grid Mesh (WGS 84)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid_wgs84.gpkg|layername=bengaluru_study_grid_wgs84</datasource>
+      <layername>Bengaluru 1-km Grid Mesh (WGS 84)</layername>
+      <srs><spatialrefsys><authid>EPSG:4326</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="singleSymbol">
+        <symbols>
+          <symbol type="fill" name="0" alpha="1">
+            <layer class="SimpleFill">
+              <prop k="color" v="0,0,0,0"/>
+              <prop k="outline_color" v="100,116,139,120"/>
+              <prop k="outline_width" v="0.2"/>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+
+    <!-- 15. Native Grid 6933 -->
+    <maplayer type="vector" id="grid_native_6933_layer" name="Bengaluru 1-km Equal-Area Grid (Native EPSG:6933)" geometry="Polygon">
+      <datasource>./bengaluru_study_grid.gpkg|layername=bengaluru_study_grid</datasource>
+      <layername>Bengaluru 1-km Equal-Area Grid (Native EPSG:6933)</layername>
+      <srs><spatialrefsys><authid>EPSG:6933</authid></spatialrefsys></srs>
+      <provider encoding="UTF-8">ogr</provider>
+      <renderer-v2 type="singleSymbol">
+        <symbols>
+          <symbol type="fill" name="0" alpha="1">
+            <layer class="SimpleFill">
+              <prop k="color" v="0,0,0,0"/>
+              <prop k="outline_color" v="71,85,105,180"/>
+              <prop k="outline_width" v="0.25"/>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+    </maplayer>
+  </projectlayers>
+</qgis>

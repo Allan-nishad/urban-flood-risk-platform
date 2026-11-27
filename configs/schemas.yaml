@@ -1,0 +1,123 @@
+# Canonical Data Schemas for Urban Flood Risk Platform
+version: "1.0.0"
+canonical_timezone: "UTC"
+display_timezone: "Asia/Kolkata"
+
+schemas:
+  rainfall:
+    description: >
+      Canonical tabular schema for historical or observed in-situ/satellite rainfall observations.
+      Must represent accumulated depth in millimetres (mm) over the observation interval,
+      or instantaneous rate explicitly converted to depth over that interval.
+    required_columns:
+      observation_time:
+        type: "datetime"
+        description: "Observation start or canonical timestamp in UTC (ISO 8601 string or parsed datetime)."
+      precipitation_mm:
+        type: "float"
+        description: "Precipitation accumulated depth in millimetres. Must be non-negative (>= 0.0)."
+        min: 0.0
+        max: 2000.0
+    optional_columns:
+      latitude:
+        type: "float"
+        min: -90.0
+        max: 90.0
+        description: "WGS84 latitude coordinate in decimal degrees."
+      longitude:
+        type: "float"
+        min: -180.0
+        max: 180.0
+        description: "WGS84 longitude coordinate in decimal degrees."
+      grid_id:
+        type: "string"
+        description: "Globally anchored spatial grid cell identifier (e.g. g1000_7472_1625)."
+      station_id:
+        type: "string"
+        description: "Observational station identifier (e.g., IMD AWS/ARG station code)."
+      source:
+        type: "string"
+        description: "Data source identifier (e.g., GPM_IMERG_V07, IMD_AWS, KSNDMC)."
+      quality_flag:
+        type: "integer"
+        description: "Quality assurance code: 0=good/verified, 1=suspect, 2=interpolated/estimated, -1=missing."
+
+  weather_forecast:
+    description: >
+      Canonical tabular schema for weather model precipitation forecasts.
+      Enforces separation of forecast issue time from forecast valid time to eliminate
+      future-information leakage in retrospective evaluations and live forecasting.
+    required_columns:
+      forecast_issue_time:
+        type: "datetime"
+        description: "Exact timestamp (UTC) when the forecast run was issued and made available."
+      valid_time:
+        type: "datetime"
+        description: "Target timestamp (UTC) for which the forecast predicts meteorological conditions."
+      precipitation_mm:
+        type: "float"
+        description: "Predicted precipitation depth in millimetres over the interval ending at valid_time."
+        min: 0.0
+        max: 2000.0
+    optional_columns:
+      latitude:
+        type: "float"
+        min: -90.0
+        max: 90.0
+      longitude:
+        type: "float"
+        min: -180.0
+        max: 180.0
+      grid_id:
+        type: "string"
+      source:
+        type: "string"
+        description: "Provider or distribution channel (e.g. ECMWF_HRES, GFS_0p25, IMD_WRF)."
+      forecast_model:
+        type: "string"
+        description: "Numerical Weather Prediction (NWP) model name and resolution."
+
+  flood_events:
+    description: >
+      Canonical tabular schema for historical urban flood records, inundation reports,
+      and official disaster management inventories. Tracks spatial precision to prevent
+      improperly mapping coarse district records to fine 1-km cells.
+    required_columns:
+      event_id:
+        type: "string"
+        description: "Unique persistent identifier for the flood event record."
+      event_start:
+        type: "datetime"
+        description: "Onset timestamp or date (UTC)."
+      source:
+        type: "string"
+        description: "Authoritative reporting agency or catalogue (e.g., BBMP_CONTROL_ROOM, KSDMA, DFO, MEDIA_VERIFIED)."
+    optional_columns:
+      event_end:
+        type: "datetime"
+        description: "Recession or conclusion timestamp (UTC)."
+      admin_area:
+        type: "string"
+        description: "Administrative unit (e.g., ward name, taluk, district)."
+      latitude:
+        type: "float"
+        min: -90.0
+        max: 90.0
+      longitude:
+        type: "float"
+        min: -180.0
+        max: 180.0
+      geometry_id:
+        type: "string"
+        description: "Spatial identifier matching a road segment, lake catchment, or ward polygon."
+      spatial_precision:
+        type: "string"
+        enum: ["point_exact", "street_junction", "subward_neighborhood", "ward", "taluk", "district"]
+        description: "Spatial fidelity of the event observation to prevent false precision."
+      severity:
+        type: "string"
+        description: "Qualitative or quantitative severity rating (e.g., low, moderate, severe, catastrophic)."
+      description:
+        type: "string"
+        description: "Descriptive context, impacted infrastructure, or recorded inundation depth."
+

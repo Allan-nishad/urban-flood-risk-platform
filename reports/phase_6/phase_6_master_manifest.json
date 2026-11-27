@@ -1,0 +1,122 @@
+{
+  "manifest_name": "Phase 6 Master Deliverables Manifest",
+  "campaign": "Phase 6: Genuine Meteorological Data Acquisition, Independent Flood Evidence, Authentic Sentinel-1 Processing, Physical Hydrological Modelling & Research Platform Integration",
+  "study_area": "Bengaluru Urban provisional study domain (1,170 cells in EPSG:6933, bounded by 77.45 - 77.75 E, 12.85 - 13.15 N)",
+  "total_datasets": 16,
+  "created_at_utc": "2026-11-05T17:06:06.153908Z",
+  "integrity_verification_status": "100%_CRYPTOGRAPHICALLY_VERIFIED",
+  "datasets": {
+    "nwp_acquisition_log": {
+      "file_path": "data/processed/phase6/nwp/nwp_acquisition_log.csv",
+      "file_size_bytes": 79873,
+      "sha256_checksum": "f5b1dba4f4379b1232dd848d1e8542fdde3a2e9240ed1f105c5a390de745d7b4",
+      "description": "Log of NOAA GFS byte-range acquisition attempts and HTTP status",
+      "stage": "nwp"
+    },
+    "nwp_forecast_provenance": {
+      "file_path": "data/processed/phase6/nwp/nwp_forecast_provenance.parquet",
+      "file_size_bytes": 30182,
+      "sha256_checksum": "37454a1b0d48e587b2e2fa156ffb067a25305972e8a95f7ebbddb1e9a43c2f16",
+      "description": "ecCodes decoded message provenance and WMO GRIB2 headers",
+      "stage": "nwp"
+    },
+    "nwp_forecast_archive": {
+      "file_path": "data/processed/phase6/nwp/nwp_forecast_archive.parquet",
+      "file_size_bytes": 425480,
+      "sha256_checksum": "b723e35d60c183dc2b82f4e369395568f94076c3ea0f0a90d59034913bab46a5",
+      "description": "Cell-mapped authentic NOAA GFS forecast rainfall time series across study domain",
+      "stage": "nwp"
+    },
+    "rain_gauge_station_registry": {
+      "file_path": "data/processed/phase6/ground_rainfall/rain_gauge_station_registry.parquet",
+      "file_size_bytes": 9500,
+      "sha256_checksum": "62ba8438f73fdba7a1a60ed5167b1592953c945b8d671aaea386658215c6728d",
+      "description": "Station metadata, elevation, sensor type, topographic classification, and hydrological role",
+      "stage": "ground_rainfall"
+    },
+    "ground_rainfall_observations": {
+      "file_path": "data/processed/phase6/ground_rainfall/ground_rainfall_observations.parquet",
+      "file_size_bytes": 11605,
+      "sha256_checksum": "c22523165f23936653eb643fc04632e705701293e4d85c5e3dacd2b2a7dce008",
+      "description": "Daily 24h accumulated rainfall records from authentic ground gauges",
+      "stage": "ground_rainfall"
+    },
+    "gauge_coverage_by_cell": {
+      "file_path": "data/processed/phase6/ground_rainfall/gauge_coverage_by_cell.parquet",
+      "file_size_bytes": 26667,
+      "sha256_checksum": "274cfa058bd31875295683d307b6c12b21c6656229e3711b12fa1d525f77b9ad",
+      "description": "Distance to nearest gauge, density of gauges, and coverage tier for all 1,170 cells",
+      "stage": "ground_rainfall"
+    },
+    "gfs_vs_gauge_validation_metrics": {
+      "file_path": "data/processed/phase6/ground_rainfall/gfs_vs_gauge_validation_metrics.parquet",
+      "file_size_bytes": 14737,
+      "sha256_checksum": "8d3077523e00c8d1fdf0dbba19a955bf10940b94941c2a8a548a231155152622",
+      "description": "Paired 24h NWP forecast vs ground gauge observations and error metrics",
+      "stage": "ground_rainfall"
+    },
+    "independent_flood_incident_inventory": {
+      "file_path": "data/processed/phase6/flood_evidence/independent_flood_incident_inventory.parquet",
+      "file_size_bytes": 14648,
+      "sha256_checksum": "733a99293a1cbc5f9b85798b34786808b9b91e3bc0fe2f31b32eaeafa5a80c61",
+      "description": "Multi-source verified positive inundation sites and monitored negative sites with estimated water depths",
+      "stage": "flood_evidence"
+    },
+    "flood_validation_ground_truth_matrix": {
+      "file_path": "data/processed/phase6/flood_evidence/flood_validation_ground_truth_matrix.parquet",
+      "file_size_bytes": 27050,
+      "sha256_checksum": "7c774f817f226c6503d5a674d9d8f9f63136a69f6162b65fa9ddce6b5f9f4378",
+      "description": "Cell-by-cell ground truth classification across 1,170 provisional study cells, explicitly marking unobserved cells",
+      "stage": "flood_evidence"
+    },
+    "flood_evidence_gate_audit": {
+      "file_path": "data/processed/phase6/flood_evidence/flood_evidence_gate_audit.parquet",
+      "file_size_bytes": 10219,
+      "sha256_checksum": "07eaae3f0e8cf7b2ab9a60087dbf76a4dc305b08d8d8d679e89e0c479e2ee068",
+      "description": "Scientific justification and gate status for Supervised Machine Learning Flood Prediction",
+      "stage": "flood_evidence"
+    },
+    "sar_scene_audit_registry": {
+      "file_path": "data/processed/phase6/sar/sar_scene_audit_registry.parquet",
+      "file_size_bytes": 11340,
+      "sha256_checksum": "42b076e90c27b929f01a72d4c0f195f982ede1cd0fe8f9b46273a224b409b90f",
+      "description": "Copernicus Data Space Ecosystem verified scene audit records for pre-event, co-event, and post-event passes",
+      "stage": "sar"
+    },
+    "sar_flood_signature_features": {
+      "file_path": "data/processed/phase6/sar/sar_flood_signature_features.parquet",
+      "file_size_bytes": 31604,
+      "sha256_checksum": "47586e1b55fdfc180d45c5442d27bf66c3a25e83071a73f307950b3717662b7e",
+      "description": "Cell-level radiometric backscatter, flood change fractions, and double-bounce detection across 1,170 cells",
+      "stage": "sar"
+    },
+    "sar_ground_truth_cross_validation": {
+      "file_path": "data/processed/phase6/sar/sar_ground_truth_cross_validation.parquet",
+      "file_size_bytes": 9789,
+      "sha256_checksum": "8dbca740f5fc034b821bc1f6ca716ee82dce13f3cb5a73597173fe6d82ff42f4",
+      "description": "Cross-validation of SAR flood signatures against Stage 6C ground truth evidence",
+      "stage": "sar"
+    },
+    "topographic_routing_static_features": {
+      "file_path": "data/processed/phase6/hydrology/topographic_routing_static_features.parquet",
+      "file_size_bytes": 55398,
+      "sha256_checksum": "45b49a8cce9f2e864ee07380c1b94165478821e5d30b98758abccf4366cb8e7e",
+      "description": "Slope gradients, TWI, sink depths, upstream contributing area, and runoff coefficients for all 1,170 cells",
+      "stage": "hydrology"
+    },
+    "dynamic_hydrological_inundation_potential": {
+      "file_path": "data/processed/phase6/hydrology/dynamic_hydrological_inundation_potential.parquet",
+      "file_size_bytes": 233899,
+      "sha256_checksum": "bd69b36ac35d5500e756fa23a75ec72d9f1e60311432d4d236ec0f2fb2c28e3a",
+      "description": "Daily 24h effective runoff depth, HIPI score, and physical flood risk tier coupled with genuine NOAA GFS forecasts",
+      "stage": "hydrology"
+    },
+    "hydrology_ground_truth_validation": {
+      "file_path": "data/processed/phase6/hydrology/hydrology_ground_truth_validation.parquet",
+      "file_size_bytes": 48609,
+      "sha256_checksum": "d97f29584d29f943cb7fbaa9f68b1e85dcae5baf26a9a005887ed74bda331716",
+      "description": "Cross-validation of physical HIPI index against verified positive and negative ground truth incidents",
+      "stage": "hydrology"
+    }
+  }
+}

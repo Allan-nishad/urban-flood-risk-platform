@@ -1,0 +1,38 @@
+study_area:
+  id: bengaluru_urban
+  name: Bengaluru Urban
+  country: India
+  admin_level: district
+
+  bbox_wgs84:
+    west: 77.45
+    south: 12.85
+    east: 77.75
+    north: 13.15
+
+  boundary_file: data/external/boundaries/bengaluru_urban.geojson
+
+  boundary_status: pending_authoritative_boundary
+  boundary_notes: >
+    Official Survey of India / KSRSAC / BBMP district boundary ingestion pending.
+    Current bounding box represents the greater Bengaluru urban core extent for development.
+    The platform processing engine operates identically on true administrative boundaries
+    or bounding boxes once authoritative GeoJSON/Shapefile is placed in boundary_file.
+
+spatial:
+  analysis_crs: EPSG:6933
+  grid_size_m: 1000
+  grid_scheme: global_equal_area_square
+
+time:
+  timezone: Asia/Kolkata
+  canonical_timestamp: UTC
+  rainfall_aggregation: daily
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  external: data/external
+  reports: reports
+

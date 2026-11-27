@@ -1,0 +1,87 @@
+{
+  "crs_metadata": {
+    "crs_id": "EPSG:6933",
+    "crs_name": "WGS 84 / NSIDC EASE-Grid 2.0 Global",
+    "projection_method": "Lambert Cylindrical Equal Area (EPSG:9835)",
+    "standard_parallel": "30.0 degrees North/South",
+    "natural_origin": "0.0 degrees (Greenwich / Equator)",
+    "ellipsoid": "WGS 84 (semi-major: 6378137.0 m, inverse flattening: 298.257223563)"
+  },
+  "total_cells": 1170,
+  "nominal_cell_size_m": 1000,
+  "nominal_area_sqm": 1000000.0,
+  "geodesic_area_sqm": {
+    "min": 1000000.001802206,
+    "max": 1000000.0018119812,
+    "mean": 1000000.0018074329,
+    "std": 1.7086371441727798e-06
+  },
+  "geodesic_area_diff_sqm": {
+    "min": 0.001802206039428711,
+    "max": 0.001811981201171875,
+    "mean": 0.0018074329082782452,
+    "std": 1.7086371433272522e-06
+  },
+  "geodesic_area_ratio": {
+    "min": 1.000000001802206,
+    "max": 1.0000000018119812,
+    "mean": 1.000000001807433,
+    "std": 1.7086330200971665e-12
+  },
+  "edge_lengths_m": {
+    "south_edge": {
+      "min": 1123.6855250588912,
+      "max": 1125.060220323398,
+      "mean": 1124.3755861508268
+    },
+    "north_edge": {
+      "min": 1123.648896978736,
+      "max": 1125.0244723278718,
+      "mean": 1124.339398372877
+    },
+    "west_edge": {
+      "min": 888.8554293439857,
+      "max": 889.9432038060139,
+      "mean": 889.3969541507528
+    },
+    "east_edge": {
+      "min": 888.8554293439857,
+      "max": 889.9432038060139,
+      "mean": 889.3969541507528
+    }
+  },
+  "edge_ratios": {
+    "south_edge": {
+      "min": 1.1236855250588913,
+      "max": 1.125060220323398,
+      "mean": 1.1243755861508269
+    },
+    "north_edge": {
+      "min": 1.1236488969787362,
+      "max": 1.1250244723278717,
+      "mean": 1.124339398372877
+    },
+    "west_edge": {
+      "min": 0.8888554293439858,
+      "max": 0.8899432038060139,
+      "mean": 0.8893969541507528
+    },
+    "east_edge": {
+      "min": 0.8888554293439858,
+      "max": 0.8899432038060139,
+      "mean": 0.8893969541507528
+    }
+  },
+  "domain_coverage": {
+    "fully_inside_count": 1036,
+    "partially_intersecting_count": 134,
+    "outside_count": 0,
+    "mean_fraction_inside": 0.9232
+  },
+  "boundary_coverage": {
+    "fully_inside_count": 1036,
+    "partially_intersecting_count": 134,
+    "outside_count": 0,
+    "mean_fraction_inside": 0.9232
+  }
+}

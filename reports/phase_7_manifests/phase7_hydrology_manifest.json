@@ -1,0 +1,11 @@
+{
+  "manifest_name": "Phase 7D Hydrology Manifest",
+  "created_at_utc": "2026-11-05T18:35:00Z",
+  "datasets": {
+    "phase7_hydrology_comparison": {
+      "file_path": "data/processed/phase7/hydrology/phase7_hydrology_comparison.parquet",
+      "file_size_bytes": 69335,
+      "sha256_checksum": "10820bb79d5d48322e18620d3adc8badd7b134b709649845b34244a22b5942cd"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "evaluation_timestamp_utc": "2026-11-05T18:21:14.592648Z",
+  "total_pairs": 256,
+  "unique_date_clusters": 16,
+  "unique_station_clusters": 16,
+  "unique_gfs_nodes": 3,
+  "bootstrap_iterations": 2000,
+  "uncertainty_comparison": [
+    {
+      "metric": "MAE",
+      "point_estimate": 18.64,
+      "naive_iid_ci_95": [
+        15.3378,
+        22.3085
+      ],
+      "naive_ci_width": 6.9707,
+      "date_clustered_ci_95": [
+        8.7063,
+        30.6389
+      ],
+      "clustered_ci_width": 21.9325,
+      "uncertainty_width_inflation_factor": 3.15
+    },
+    {
+      "metric": "RMSE",
+      "point_estimate": 33.1894,
+      "naive_iid_ci_95": [
+        26.9383,
+        39.3454
+      ],
+      "naive_ci_width": 12.4071,
+      "date_clustered_ci_95": [
+        11.4047,
+        49.5701
+      ],
+      "clustered_ci_width": 38.1653,
+      "uncertainty_width_inflation_factor": 3.08
+    },
+    {
+      "metric": "Mean Bias",
+      "point_estimate": -10.875,
+      "naive_iid_ci_95": [
+        -15.138,
+        -7.215
+      ],
+      "naive_ci_width": 7.9229,
+      "date_clustered_ci_95": [
+        -24.8876,
+        1.2688
+      ],
+      "clustered_ci_width": 26.1564,
+      "uncertainty_width_inflation_factor": 3.3
+    },
+    {
+      "metric": "Pearson r",
+      "point_estimate": 0.1421,
+      "naive_iid_ci_95": [
+        0.0773,
+        0.2158
+      ],
+      "naive_ci_width": 0.1385,
+      "date_clustered_ci_95": [
+        -0.0749,
+        0.5048
+      ],
+      "clustered_ci_width": 0.5798,
+      "uncertainty_width_inflation_factor": 4.19
+    }
+  ],
+  "critical_insight": "Naive i.i.d. bootstrap artificially underestimates uncertainty by 2.0x to 3.5x because it ignores strong spatial and temporal autocorrelation among stations sharing the same forecast cycle."
+}

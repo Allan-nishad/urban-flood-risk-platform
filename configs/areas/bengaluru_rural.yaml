@@ -1,0 +1,40 @@
+study_area:
+  id: bengaluru_rural
+  name: Bengaluru Rural
+  country: India
+  admin_level: district
+
+  # Documented district envelope for Bengaluru Rural (Devanahalli, Doddaballapura, Hoskote, Nelamangala)
+  # Overlaps contiguous perimeter of Bengaluru Urban
+  bbox_wgs84:
+    west: 77.20
+    south: 12.90
+    east: 77.98
+    north: 13.45
+
+  boundary_file: data/external/boundaries/bengaluru_rural.geojson
+
+  boundary_status: pending_authoritative_boundary
+  boundary_notes: >
+    Official Survey of India / KSRSAC district boundary ingestion pending.
+    Current bounding envelope covers the four taluks of Bengaluru Rural district
+    (Devanahalli, Doddaballapura, Hoskote, Nelamangala) and shares physical boundary cells
+    with Bengaluru Urban.
+
+spatial:
+  analysis_crs: EPSG:6933
+  grid_size_m: 1000
+  grid_scheme: global_equal_area_square
+
+time:
+  timezone: Asia/Kolkata
+  canonical_timestamp: UTC
+  rainfall_aggregation: daily
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  external: data/external
+  reports: reports
+
