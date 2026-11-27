@@ -1,0 +1,324 @@
+{
+  "model_name": "random_forest",
+  "model_version": "v8.0-exp-rf-20261127",
+  "model_artifact_path": "models/v8_experimental/flood_risk_model_v8_exp.joblib",
+  "trained_at_utc": "2026-11-27T04:54:53Z",
+  "random_seed": 42,
+  "qualification_status": "EXPERIMENTAL_UNVALIDATED",
+  "warning_gate": "BLOCKED_EXPERIMENTAL_MODEL",
+  "qualification_reason": "Trained on 48 labeled records (34 positive, 14 proxy-negative). Leave-One-Event-Group-Out (LOEGO) binary validation is INFEASIBLE because all 14 proxy-negative records belong to a single event group (EG_2022_08_09_MONSOON).",
+  "event_group_summary": {
+    "canonical_event_groups_total": 6,
+    "positive_event_groups": 6,
+    "negative_control_event_groups": 1,
+    "loeo_feasible": false
+  },
+  "training_sample_counts": {
+    "n_total": 48,
+    "n_positive": 34,
+    "n_proxy_negative": 14,
+    "n_verified_negative": 0
+  },
+  "feature_columns": [
+    "elevation_m",
+    "slope_deg",
+    "upstream_contributing_area_km2",
+    "topographic_wetness_index",
+    "depression_depth_m",
+    "is_closed_sink",
+    "built_up_fraction",
+    "tree_cover_fraction",
+    "cropland_fraction",
+    "water_fraction",
+    "era5_rain_24h_pre_mm",
+    "era5_rain_72h_pre_mm",
+    "era5_api_7d_pre_mm",
+    "era5_pre_missing_flag"
+  ],
+  "feature_dictionary": {
+    "elevation_m": {
+      "source": "SRTM 30m DEM",
+      "unit": "m",
+      "type": "static_terrain"
+    },
+    "slope_deg": {
+      "source": "SRTM 30m DEM",
+      "unit": "degrees",
+      "type": "static_terrain"
+    },
+    "upstream_contributing_area_km2": {
+      "source": "D8 Flow Routing",
+      "unit": "km2",
+      "type": "static_hydrology"
+    },
+    "topographic_wetness_index": {
+      "source": "D8 TWI ln(a/tan b)",
+      "unit": "dimensionless",
+      "type": "static_hydrology"
+    },
+    "depression_depth_m": {
+      "source": "Raw SRTM Pit Depth",
+      "unit": "m",
+      "type": "static_hydrology"
+    },
+    "is_closed_sink": {
+      "source": "DEM Sink Indicator",
+      "unit": "binary",
+      "type": "static_hydrology"
+    },
+    "built_up_fraction": {
+      "source": "ESA WorldCover 10m",
+      "unit": "fraction [0,1]",
+      "type": "static_landcover"
+    },
+    "tree_cover_fraction": {
+      "source": "ESA WorldCover 10m",
+      "unit": "fraction [0,1]",
+      "type": "static_landcover"
+    },
+    "cropland_fraction": {
+      "source": "ESA WorldCover 10m",
+      "unit": "fraction [0,1]",
+      "type": "static_landcover"
+    },
+    "water_fraction": {
+      "source": "ESA WorldCover 10m",
+      "unit": "fraction [0,1]",
+      "type": "static_landcover"
+    },
+    "era5_rain_24h_pre_mm": {
+      "source": "Open-Meteo ERA5-Land (< event_start_utc)",
+      "unit": "mm",
+      "type": "pre_event_reanalysis"
+    },
+    "era5_rain_72h_pre_mm": {
+      "source": "Open-Meteo ERA5-Land (< event_start_utc)",
+      "unit": "mm",
+      "type": "pre_event_reanalysis"
+    },
+    "era5_api_7d_pre_mm": {
+      "source": "Open-Meteo ERA5-Land 7d decay (< event_start_utc)",
+      "unit": "mm",
+      "type": "pre_event_reanalysis"
+    },
+    "era5_pre_missing_flag": {
+      "source": "Missing-data indicator for pre-event rain",
+      "unit": "binary",
+      "type": "missing_flag"
+    }
+  },
+  "feature_importances": {
+    "elevation_m": 0.1865,
+    "slope_deg": 0.1423,
+    "upstream_contributing_area_km2": 0.0296,
+    "topographic_wetness_index": 0.1339,
+    "depression_depth_m": 0.0,
+    "is_closed_sink": 0.0032,
+    "built_up_fraction": 0.0853,
+    "tree_cover_fraction": 0.0656,
+    "cropland_fraction": 0.2081,
+    "water_fraction": 0.0673,
+    "era5_rain_24h_pre_mm": 0.0279,
+    "era5_rain_72h_pre_mm": 0.0284,
+    "era5_api_7d_pre_mm": 0.0218,
+    "era5_pre_missing_flag": 0.0
+  },
+  "baselines": {
+    "static_mcda_baseline": {
+      "n_total": 48,
+      "n_pos": 34,
+      "n_neg": 14,
+      "precision": 0.7297,
+      "recall": 0.7941,
+      "f1": 0.7606,
+      "roc_auc": 0.6113,
+      "pr_auc": 0.8144,
+      "brier_score": 0.2177,
+      "fpr": 0.7143,
+      "fnr": 0.2059,
+      "confusion_matrix": {
+        "tn": 4,
+        "fp": 10,
+        "fn": 7,
+        "tp": 27
+      }
+    },
+    "era5_rain_ge_15_6mm_baseline": {
+      "n_total": 48,
+      "n_pos": 34,
+      "n_neg": 14,
+      "precision": 0.5333,
+      "recall": 0.2353,
+      "f1": 0.3265,
+      "roc_auc": 0.3676,
+      "pr_auc": 0.6672,
+      "brier_score": 0.6875,
+      "fpr": 0.5,
+      "fnr": 0.7647,
+      "confusion_matrix": {
+        "tn": 7,
+        "fp": 7,
+        "fn": 26,
+        "tp": 8
+      }
+    }
+  },
+  "candidate_models": {
+    "logistic_regression": {
+      "spatial_block_5fold_cv": {
+        "n_total": 48,
+        "n_pos": 34,
+        "n_neg": 14,
+        "precision": 0.9091,
+        "recall": 0.8824,
+        "f1": 0.8955,
+        "roc_auc": 0.8067,
+        "pr_auc": 0.8264,
+        "brier_score": 0.126,
+        "fpr": 0.2143,
+        "fnr": 0.1176,
+        "confusion_matrix": {
+          "tn": 11,
+          "fp": 3,
+          "fn": 4,
+          "tp": 30
+        }
+      },
+      "temporal_2023_2025_holdout": {
+        "n_test_future_positives": 3,
+        "n_test_future_negatives": 0,
+        "future_positive_recall": 0.0,
+        "note": "0 negative controls exist in 2023-2025; only positive recall is measurable."
+      }
+    },
+    "random_forest": {
+      "spatial_block_5fold_cv": {
+        "n_total": 48,
+        "n_pos": 34,
+        "n_neg": 14,
+        "precision": 0.8571,
+        "recall": 0.8824,
+        "f1": 0.8696,
+        "roc_auc": 0.8382,
+        "pr_auc": 0.9232,
+        "brier_score": 0.1425,
+        "fpr": 0.3571,
+        "fnr": 0.1176,
+        "confusion_matrix": {
+          "tn": 9,
+          "fp": 5,
+          "fn": 4,
+          "tp": 30
+        }
+      },
+      "temporal_2023_2025_holdout": {
+        "n_test_future_positives": 3,
+        "n_test_future_negatives": 0,
+        "future_positive_recall": 0.3333,
+        "note": "0 negative controls exist in 2023-2025; only positive recall is measurable."
+      }
+    },
+    "hist_gradient_boosting": {
+      "spatial_block_5fold_cv": {
+        "n_total": 48,
+        "n_pos": 34,
+        "n_neg": 14,
+        "precision": 0.7949,
+        "recall": 0.9118,
+        "f1": 0.8493,
+        "roc_auc": 0.6922,
+        "pr_auc": 0.8339,
+        "brier_score": 0.2077,
+        "fpr": 0.5714,
+        "fnr": 0.0882,
+        "confusion_matrix": {
+          "tn": 6,
+          "fp": 8,
+          "fn": 3,
+          "tp": 31
+        }
+      },
+      "temporal_2023_2025_holdout": {
+        "n_test_future_positives": 3,
+        "n_test_future_negatives": 0,
+        "future_positive_recall": 0.3333,
+        "note": "0 negative controls exist in 2023-2025; only positive recall is measurable."
+      }
+    },
+    "xgboost": {
+      "spatial_block_5fold_cv": {
+        "n_total": 48,
+        "n_pos": 34,
+        "n_neg": 14,
+        "precision": 0.7838,
+        "recall": 0.8529,
+        "f1": 0.8169,
+        "roc_auc": 0.7668,
+        "pr_auc": 0.9004,
+        "brier_score": 0.1987,
+        "fpr": 0.5714,
+        "fnr": 0.1471,
+        "confusion_matrix": {
+          "tn": 6,
+          "fp": 8,
+          "fn": 5,
+          "tp": 29
+        }
+      },
+      "temporal_2023_2025_holdout": {
+        "n_test_future_positives": 3,
+        "n_test_future_negatives": 0,
+        "future_positive_recall": 0.3333,
+        "note": "0 negative controls exist in 2023-2025; only positive recall is measurable."
+      }
+    }
+  },
+  "sensitivity_analyses": {
+    "confirmed_only": {
+      "n_pos": 30,
+      "n_neg": 14,
+      "random_forest_spatial_cv": {
+        "n_total": 44,
+        "n_pos": 30,
+        "n_neg": 14,
+        "precision": 0.8438,
+        "recall": 0.9,
+        "f1": 0.871,
+        "roc_auc": 0.8607,
+        "pr_auc": 0.9137,
+        "brier_score": 0.1283,
+        "fpr": 0.3571,
+        "fnr": 0.1,
+        "confusion_matrix": {
+          "tn": 9,
+          "fp": 5,
+          "fn": 3,
+          "tp": 27
+        }
+      }
+    },
+    "dedup_event_group": {
+      "n_pos": 30,
+      "n_neg": 7,
+      "random_forest_spatial_cv": {
+        "n_total": 37,
+        "n_pos": 30,
+        "n_neg": 7,
+        "precision": 0.9667,
+        "recall": 0.9667,
+        "f1": 0.9667,
+        "roc_auc": 0.9119,
+        "pr_auc": 0.9748,
+        "brier_score": 0.0852,
+        "fpr": 0.1429,
+        "fnr": 0.0333,
+        "confusion_matrix": {
+          "tn": 6,
+          "fp": 1,
+          "fn": 1,
+          "tp": 29
+        }
+      }
+    }
+  }
+}

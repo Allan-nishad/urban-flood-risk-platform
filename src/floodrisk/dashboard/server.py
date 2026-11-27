@@ -696,6 +696,79 @@ class DashboardDataStore:
             "hourly_forecast": hourly,
         }
 
+    def get_ml_experimental_payload(self, grid_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        from ..ml import ExperimentalFloodInference
+
+        inf = ExperimentalFloodInference()
+        meta = inf.metadata or {}
+        if grid_id is None:
+            return {
+                "status": "AVAILABLE" if inf.model is not None else "UNAVAILABLE",
+                "model_name": meta.get("model_name"),
+                "model_version": meta.get("model_version"),
+                "qualification_status": meta.get("qualification_status", "UNAVAILABLE"),
+                "warning_gate": meta.get("warning_gate", "BLOCKED_EXPERIMENTAL_MODEL"),
+                "qualification_reason": meta.get("qualification_reason"),
+                "event_group_summary": meta.get("event_group_summary"),
+                "training_sample_counts": meta.get("training_sample_counts"),
+                "baselines": meta.get("baselines"),
+                "candidate_models": meta.get("candidate_models"),
+                "feature_importances": meta.get("feature_importances"),
+            }
+
+        # Cell-level experimental inference using static terrain + live/stale rain flag
+        matched = [
+            f["properties"] for f in self.cells_geojson.get("features", [])
+            if f.get("properties", {}).get("grid_id") == grid_id
+        ]
+        if not matched:
+            return None
+        p = matched[0]
+        # Join static hydrology features from phase6/phase7 if present
+        p6_h = Path("data/processed/phase6/hydrology/topographic_routing_static_features.parquet")
+        p7_h = Path("data/processed/phase7/hydrology/phase7_hydrology_comparison.parquet")
+        elev = p.get("elevation_mean_m")
+        slope = 1.5
+        upa = 1.0
+        twi = 12.0
+        dep = 0.0
+        sink = 0
+        if p6_h.is_file():
+            df_h = pd.read_parquet(p6_h)
+            r = df_h[df_h["grid_id"] == grid_id]
+            if not r.empty:
+                elev = float(r.iloc[0]["elevation_m"])
+                slope = float(r.iloc[0]["slope_deg"])
+                upa = float(r.iloc[0]["upstream_contributing_area_km2"])
+                twi = float(r.iloc[0]["topographic_wetness_index"])
+        if p7_h.is_file():
+            df_p7 = pd.read_parquet(p7_h)
+            r7 = df_p7[df_p7["grid_id"] == grid_id]
+            if not r7.empty:
+                dep = float(r7.iloc[0]["depression_depth_m"])
+                sink = int(r7.iloc[0]["is_closed_sink"])
+
+        wf = self.get_weather_forecast_payload()
+        fc24 = wf.get("next_24h_precipitation_mm") if wf.get("freshness") in ("LIVE", "RECENT") else None
+        rec = {
+            "grid_id": grid_id,
+            "elevation_m": elev,
+            "slope_deg": slope,
+            "upstream_contributing_area_km2": upa,
+            "topographic_wetness_index": twi,
+            "depression_depth_m": dep,
+            "is_closed_sink": sink,
+            "built_up_fraction": p.get("built_up_fraction"),
+            "tree_cover_fraction": p.get("tree_cover_fraction"),
+            "cropland_fraction": p.get("cropland_fraction"),
+            "water_fraction": p.get("water_fraction"),
+            "era5_rain_24h_pre_mm": fc24,
+            "era5_rain_72h_pre_mm": None,
+            "era5_api_7d_pre_mm": None,
+            "era5_pre_missing_flag": 1,
+        }
+        return inf.predict_records([rec])
+
 
 _GLOBAL_DATASTORE: Optional[DashboardDataStore] = None
 
@@ -730,7 +803,10 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         params = parse_qs(parsed.query, keep_blank_values=True)
 
         if clean_path.startswith("/api/"):
-            allowed_params = {"grid_id"} if clean_path == "/api/cells" else set()
+            if clean_path in ("/api/cells", "/api/ml/experimental"):
+                allowed_params = {"grid_id"}
+            else:
+                allowed_params = set()
             unknown_params = set(params.keys()) - allowed_params
             if unknown_params:
                 self._send_error_json(
@@ -829,6 +905,20 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             return
         elif clean_path == "/api/weather/forecast":
             self._send_json(self.datastore.get_weather_forecast_payload())
+            return
+        elif clean_path == "/api/ml/experimental":
+            if "grid_id" in params:
+                target_id = params["grid_id"][0].strip()
+                if not target_id:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid query parameter", "grid_id cannot be empty")
+                    return
+                res = self.datastore.get_ml_experimental_payload(grid_id=target_id)
+                if res is None:
+                    self._send_error_json(404, "CELL_NOT_FOUND", "Grid cell not found", f"No cell found for grid_id='{target_id}'")
+                    return
+                self._send_json(res)
+                return
+            self._send_json(self.datastore.get_ml_experimental_payload())
             return
         elif clean_path.startswith("/api/"):
             self._send_error_json(404, "ENDPOINT_NOT_FOUND", "Endpoint not found", f"No route registered for '{clean_path}'")

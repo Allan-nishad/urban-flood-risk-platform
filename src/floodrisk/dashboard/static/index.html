@@ -923,6 +923,11 @@
             <div id="p7UncertVal" style="font-size:18px; font-weight:700; color:#0f172a; margin:4px 0;">Loading...</div>
             <div id="p7UncertDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase7/summary &amp; /uncertainty...</div>
           </div>
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-top:3px solid #d97706; padding:12px; border-radius:6px;">
+            <div style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase;">V8 Stage 3: Experimental ML Research</div>
+            <div id="mlExpStatusVal" style="font-size:16px; font-weight:700; color:#92400e; margin:4px 0;">Loading...</div>
+            <div id="mlExpStatusDesc" style="font-size:11px; color:#78350f;">Fetching /api/ml/experimental...</div>
+          </div>
         </div>
 
         <!-- NWP vs Ground Gauges Table -->
@@ -1815,6 +1820,20 @@
           } catch (werr) {
             console.warn("Live weather status load error:", werr);
             showApiError(`Live weather status error: ${werr.message}`);
+          }
+
+          // Load V8 Stage 3 Experimental ML Research Status
+          try {
+            const mlRes = await fetch('/api/ml/experimental');
+            if (mlRes.ok) {
+              const ml = await mlRes.json();
+              const cnt = ml.training_sample_counts || {};
+              const rf = (ml.candidate_models && ml.candidate_models[ml.model_name]) ? ml.candidate_models[ml.model_name].spatial_block_5fold_cv : {};
+              document.getElementById('mlExpStatusVal').innerText = `${ml.model_name || 'N/A'} (${ml.qualification_status || 'UNVALIDATED'})`;
+              document.getElementById('mlExpStatusDesc').innerText = `${ml.model_version || ''} | ${cnt.n_positive ?? '--'} pos / ${cnt.n_proxy_negative ?? '--'} proxy-neg | Spatial CV PR-AUC=${rf.pr_auc ?? '--'}, ROC-AUC=${rf.roc_auc ?? '--'} | Gate: ${ml.warning_gate || 'BLOCKED'}`;
+            }
+          } catch (mlerr) {
+            console.warn("Experimental ML status load error:", mlerr);
           }
 
       } catch (err) {
