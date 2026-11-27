@@ -40,12 +40,19 @@ venv.bak/
 .coverage
 htmlcov/
 
-# Data artifacts (preserve folder structure, ignore bulky interim/processed outputs)
+# Data artifacts (track data/processed/ for deployment; ignore raw/interim/state)
+data/raw/
+data/external/
 data/interim/*
 !data/interim/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
 data/state/
+
+# Local scratch, notebooks, and generated word/QGIS drafts
+scratch/
+notebooks/
+*.docx
+APPENDIX_SOURCE_CODE.md
+QGIS_EXISTING_DATA_READINESS_REPORT.md
 
 # Local IDE configuration
 .vscode/

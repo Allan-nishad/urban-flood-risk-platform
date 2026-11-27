@@ -7,6 +7,19 @@
 
 ---
 
+## Quick Start & Deployment
+
+- **Beginner Deployment Guide (Docker / VPS / Local):** See [DEPLOY.md](DEPLOY.md)
+- **Architecture & Data Flow:** See [docs/V8_ARCHITECTURE_AND_DATAFLOW.md](docs/V8_ARCHITECTURE_AND_DATAFLOW.md)
+- **Stage & Audit Reports:** See [docs/reports/](docs/reports/)
+
+```bash
+cp .env.example .env          # Set FLOODRISK_ADMIN_TOKEN
+docker compose up -d --build  # Starts dashboard on http://127.0.0.1:8501
+```
+
+---
+
 ## 1. Executive Summary
 
 This repository hosts the **data foundation and geospatial processing engine** for the research-grade platform: *AI-Based Early Detection and Forecasting of Urban Flood Risks Using Satellite and Weather Data*.
