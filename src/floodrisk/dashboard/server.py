@@ -4,6 +4,7 @@ Provides lightweight HTTP REST endpoints and serves the interactive Leaflet surv
 """
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import gzip
 import hmac
 import json
 import logging
@@ -233,6 +234,15 @@ class DashboardDataStore:
                 "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}},
                 "features": enriched_features
             }
+            self._cells_flat = [
+                {
+                    **f.get("properties", {}),
+                    "latitude": f.get("properties", {}).get("centroid_lat"),
+                    "longitude": f.get("properties", {}).get("centroid_lon"),
+                }
+                for f in enriched_features
+                if f.get("properties", {}).get("grid_id")
+            ]
 
         # 3. Incidents inventory
         if incidents_path.is_file():
@@ -1329,14 +1339,21 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             fname = "civilian-alert.html" if clean_path == "/civilian-alert.html" else "index.html"
             html_path = Path(__file__).resolve().parent / "static" / fname
             if html_path.is_file():
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self._send_security_headers(is_api=False)
                 with open(html_path, "rb") as f:
                     content = f.read()
+                use_gzip = "gzip" in self.headers.get("Accept-Encoding", "").lower() and len(content) > 1024
+                if use_gzip:
+                    content = gzip.compress(content, compresslevel=6)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                if use_gzip:
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
+                self._send_security_headers(is_api=False)
                 self.send_header("Content-Length", str(len(content)))
                 self.end_headers()
                 self.wfile.write(content)
+                self.wfile.flush()
                 return
 
         # Fallback to standard static file serving
@@ -1531,8 +1548,14 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
 
     def _send_json(self, data: Any, status: int = 200):
         body = json.dumps(data, allow_nan=False).encode("utf-8")
+        use_gzip = "gzip" in self.headers.get("Accept-Encoding", "").lower() and len(body) > 1024
+        if use_gzip:
+            body = gzip.compress(body, compresslevel=6)
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        if use_gzip:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")

@@ -2108,7 +2108,14 @@
 
     async function loadData() {
       try {
-        const sumRes = await fetch('/api/summary');
+        // Fetch core dashboard datasets in parallel for fast initial render
+        const [sumRes, cellsRes, incRes, epiRes, manRes] = await Promise.all([
+          fetch('/api/summary'),
+          fetch('/api/cells'),
+          fetch('/api/incidents'),
+          fetch('/api/episodes'),
+          fetch('/api/manifest')
+        ]);
         if (!sumRes.ok) throw new Error(`/api/summary returned HTTP ${sumRes.status}`);
         const summary = await sumRes.json();
         updateHeaderStatus(true);
@@ -2136,7 +2143,6 @@
           document.getElementById('kpiEpisodes').innerText = `${hs.total_episodes_monitored ?? 0} Episodes`;
         }
 
-        const cellsRes = await fetch('/api/cells');
         if (!cellsRes.ok) throw new Error(`/api/cells returned HTTP ${cellsRes.status}`);
         cellsGeojson = await cellsRes.json();
         const highPriCount = (cellsGeojson.features || []).filter(f => (f.properties.dynamic_risk_prioritization_score ?? 0) > 0.55).length;
@@ -2162,7 +2168,6 @@
           inspectCell(sorted[0].properties);
         }
 
-        const incRes = await fetch('/api/incidents');
         if (!incRes.ok) throw new Error(`/api/incidents returned HTTP ${incRes.status}`);
         incidentsData = await incRes.json();
         renderIncidents(incidentsData);
@@ -2186,7 +2191,6 @@
           incListEl.appendChild(item);
         });
 
-        const epiRes = await fetch('/api/episodes');
         episodesData = await epiRes.json();
         const epTbody = document.getElementById('episodesTbody');
         epTbody.innerHTML = '';
@@ -2206,7 +2210,6 @@
           epTbody.appendChild(tr);
         });
 
-        const manRes = await fetch('/api/manifest');
         const manData = await manRes.json();
         const manTbody = document.getElementById('manifestTbody');
         manTbody.innerHTML = '';
@@ -2220,6 +2223,9 @@
             <td><span class="state-badge state-resolved">VALID</span></td>`;
           manTbody.appendChild(tr);
         });
+
+        // Kick off alerts & 4-zone cards immediately without waiting for Phase 5/6/7 tables
+        const alertsPromise = loadAlerts();
 
         // Phase 5
         try {
@@ -2509,7 +2515,7 @@
           console.warn("Experimental ML status load error:", mlerr);
         }
 
-        await loadAlerts();
+        await alertsPromise;
 
       } catch (err) {
         console.error("Error loading dashboard data:", err);
