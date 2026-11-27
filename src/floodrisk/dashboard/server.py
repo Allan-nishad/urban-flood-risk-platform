@@ -691,6 +691,8 @@ class DashboardDataStore:
             "model": model_id,
             "status": freshness,
             "freshness": freshness,
+            "spatial_forcing_scope": "REGIONAL_SINGLE_ANCHOR_BENGALURU",
+            "spatial_coverage_note": "Single Bengaluru centroid anchor; not 1,170 independent cell-level forecasts.",
             "location_ref": rows[0]["location_ref"],
             "latitude": rows[0]["latitude"],
             "longitude": rows[0]["longitude"],
@@ -802,6 +804,7 @@ class DashboardDataStore:
         return {
             "status": "AVAILABLE",
             "public_dispatch_enabled": self.alert_engine.public_dispatch_enabled,
+            "spatial_forcing_scope": "REGIONAL_SINGLE_ANCHOR_BENGALURU",
             "count": len(alerts),
             "alerts": alerts,
         }

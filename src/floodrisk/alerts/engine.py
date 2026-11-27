@@ -175,11 +175,11 @@ class OperationalAlertEngine:
                 existing = open_alerts.get(cand["grid_id"])
 
                 if existing is not None:
-                    # Escalate/update if severity increased or forecast issue time changed
+                    # Update if severity changed (escalation or de-escalation) or forecast issue time changed
                     old_rank = SEVERITY_RANK.get(existing["severity"], 0)
                     new_rank = SEVERITY_RANK.get(cand["severity"], 0)
                     same_issue = existing.get("forecast_issue_time_utc") == cand.get("forecast_issue_time_utc")
-                    if new_rank > old_rank or not same_issue:
+                    if new_rank != old_rank or not same_issue:
                         new_count = int(existing.get("evaluation_count", 1)) + 1
                         self.store.update_alert_fields(
                             existing["alert_id"],
@@ -360,6 +360,11 @@ class OperationalAlertEngine:
         return {
             "status": "AVAILABLE",
             "public_dispatch_enabled": self.public_dispatch_enabled,
+            "spatial_forcing_scope": "REGIONAL_SINGLE_ANCHOR_BENGALURU",
+            "spatial_coverage_note": (
+                "Forecast forcing is derived from a single Bengaluru centroid anchor (12.9716, 77.5946) "
+                "combined with cell-level static terrain susceptibility; not 1,170 independent local forecasts."
+            ),
             "warning_disclaimer": RESEARCH_DISCLAIMER,
             "ml_qualification_gate": "BLOCKED_EXPERIMENTAL_MODEL",
             **counts,

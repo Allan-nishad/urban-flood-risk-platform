@@ -150,6 +150,12 @@ def evaluate_cell_candidate(
         "triggering_inputs": {
             "forecast_24h_mm": round(fc_24h_val, 2),
             "forecast_peak_1h_mm": round(fc_peak_val, 2),
+            "spatial_forcing_scope": "REGIONAL_SINGLE_ANCHOR_BENGALURU",
+            "forecast_anchor": {
+                "location_ref": forecast_summary.get("location_ref", "bengaluru_centroid"),
+                "latitude": forecast_summary.get("latitude", 12.9716),
+                "longitude": forecast_summary.get("longitude", 77.5946),
+            },
             "observed_rainfall_mm": obs_rain,
             "observed_rainfall_status": obs_status,
             "static_susceptibility_score": round(static_val, 4),
