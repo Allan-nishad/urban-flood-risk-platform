@@ -19,6 +19,10 @@ def test_state_contract_vocabulary_exists():
         "UNOBSERVED",
         "UNVALIDATED",
         "STALE",
+        "LIVE",
+        "RECENT",
+        "HISTORICAL",
+        "INVALID",
     }
     field = make_state_field(None, "UNOBSERVED", "test_source", "2026-11-27T00:00:00Z")
     assert field == {
@@ -211,11 +215,15 @@ def test_playwright_interactive_dashboard(live_server_url):
         page.goto(live_server_url, wait_until="networkidle")
         page.wait_for_function("document.getElementById('kpiTotalCells').innerText.includes('1,170')")
 
-        # 1. Verify initial KPIs & SAR honest metric
+        # 1. Verify initial KPIs, SAR honest metric, and V8 Stage 1 live weather bar
         assert page.inner_text("#kpiHeavyRain") == "0 Cells"
         assert page.inner_text("#kpiMax24h") == "6.10 mm"
         assert "STALE" in page.inner_text("#inspObsStateBadge")
         assert page.inner_text("#p6SarVal") == "5/13 True Specular (38.5%)"
+        page.wait_for_function("document.getElementById('liveFcstProvider').innerText !== 'Loading...'")
+        assert page.inner_text("#liveFcstProvider") == "open_meteo"
+        assert page.inner_text("#liveFcstModel") == "ecmwf_ifs025"
+        assert page.inner_text("#liveObsStatus") == "UNAVAILABLE"
 
         # 2. Switch every top-right panel tab
         for tab in ["forecastTab", "incidentsTab", "inspectorTab"]:

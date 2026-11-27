@@ -43,9 +43,23 @@ def clean_dict_for_json(d: Dict[str, Any]) -> Dict[str, Any]:
 class DashboardDataStore:
     """In-memory cache for dashboard GeoJSON, tabular datasets, and provenance status."""
 
-    def __init__(self, data_dir: Optional[Path] = None, reports_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        data_dir: Optional[Path] = None,
+        reports_dir: Optional[Path] = None,
+        weather_db_path: Optional[Path] = None,
+    ):
         self.data_dir = Path(data_dir) if data_dir else Path("data/processed")
         self.reports_dir = Path(reports_dir) if reports_dir else Path("reports")
+        if weather_db_path is not None:
+            db_p = Path(weather_db_path)
+        elif data_dir is not None:
+            db_p = self.data_dir / "floodrisk_v8.db"
+        else:
+            db_p = Path("data/state/floodrisk_v8.db")
+        from ..live import LiveWeatherRefresher, LiveWeatherStore
+        self.weather_store = LiveWeatherStore(db_p)
+        self.refresher = LiveWeatherRefresher(self.weather_store)
         self.summary: Dict[str, Any] = {}
         self.cells_geojson: Dict[str, Any] = {}
         self.incidents: List[Dict[str, Any]] = []
@@ -523,6 +537,165 @@ class DashboardDataStore:
             "manifest_integrity": self.manifest_status.get("integrity_rate", "Unknown")
         }
 
+    def get_health_payload(self) -> Dict[str, Any]:
+        health_rows = self.weather_store.get_provider_health()
+        return {
+            "status": "ok",
+            "service": "urban-flood-risk-platform-dashboard",
+            "database_status": "AVAILABLE",
+            "database_path": str(self.weather_store.db_path).replace("\\", "/"),
+            "stored_weather_records": self.weather_store.count_records(),
+            "scheduler_running": self.refresher.is_running,
+            "providers": health_rows,
+        }
+
+    def get_sources_payload(self) -> Dict[str, Any]:
+        from ..live import compute_freshness
+        om_health = self.weather_store.get_provider_health("open_meteo")
+        if om_health:
+            h = om_health[0]
+            om_fresh = compute_freshness(
+                h.get("last_success_utc"),
+                live_hours=self.refresher.freshness_live_hours,
+                recent_hours=self.refresher.freshness_recent_hours,
+            )
+            om_entry = {
+                "source_id": "open_meteo_forecast",
+                "provider": "Open-Meteo",
+                "data_type": "FORECAST",
+                "model_id": h.get("model_id", "ecmwf_ifs025"),
+                "status": h.get("status") if h.get("last_error") else om_fresh,
+                "freshness": om_fresh,
+                "last_attempt_utc": h.get("last_attempt_utc"),
+                "last_success_utc": h.get("last_success_utc"),
+                "last_error": h.get("last_error"),
+                "records_written": h.get("records_written", 0),
+            }
+        else:
+            om_entry = {
+                "source_id": "open_meteo_forecast",
+                "provider": "Open-Meteo",
+                "data_type": "FORECAST",
+                "model_id": self.refresher.adapter.preferred_model,
+                "status": "UNAVAILABLE",
+                "freshness": "UNAVAILABLE",
+                "last_attempt_utc": None,
+                "last_success_utc": None,
+                "last_error": "No refresh executed yet",
+                "records_written": 0,
+            }
+
+        sources = [
+            om_entry,
+            {
+                "source_id": "phase4_3_observed_baseline",
+                "provider": "Phase 4.3 Static Baseline",
+                "data_type": "OBSERVATION",
+                "status": "STALE",
+                "freshness": "STALE",
+                "last_success_utc": "2026-11-05T00:00:00Z",
+                "last_error": None,
+                "note": "Constant 12.5 mm historical baseline; excluded from current live risk.",
+            },
+            {
+                "source_id": "ksndmc_live_gauges",
+                "provider": "KSNDMC",
+                "data_type": "OBSERVATION",
+                "status": "UNAVAILABLE",
+                "freshness": "UNAVAILABLE",
+                "last_success_utc": None,
+                "last_error": "No open unauthenticated REST API; SSL certificate verification failed on portal.",
+            },
+            {
+                "source_id": "imd_live_api",
+                "provider": "IMD Mausam",
+                "data_type": "OBSERVATION",
+                "status": "UNAVAILABLE",
+                "freshness": "UNAVAILABLE",
+                "last_success_utc": None,
+                "last_error": "Public HTML portal only; API requires formal IP whitelisting.",
+            },
+        ]
+        return {"sources": sources}
+
+    def get_weather_current_payload(self) -> Dict[str, Any]:
+        return {
+            "data_type": "OBSERVATION",
+            "status": "UNAVAILABLE",
+            "source": "KSNDMC / IMD live telemetry",
+            "timestamp": None,
+            "observed_rainfall_mm": None,
+            "unit": "mm",
+            "detail": "No verified live ground-gauge observation feed is currently available; forecasts are not substituted as observations.",
+            "historical_baseline": {
+                "status": "STALE",
+                "data_type": "HISTORICAL",
+                "source": "dynamic_risk_intelligence_bengaluru.parquet (Phase 4.3 constant 12.5mm)",
+                "timestamp": "2026-11-05T00:00:00Z",
+                "observed_rainfall_24h_mm": 12.5,
+                "unit": "mm",
+            },
+        }
+
+    def get_weather_forecast_payload(self) -> Dict[str, Any]:
+        from ..live import compute_freshness
+        rows = self.weather_store.get_latest_forecast()
+        health = self.weather_store.get_provider_health("open_meteo")
+        last_error = health[0].get("last_error") if health else None
+        if not rows:
+            return {
+                "data_type": "FORECAST",
+                "provider": "open_meteo",
+                "model": self.refresher.adapter.preferred_model,
+                "status": "UNAVAILABLE",
+                "freshness": "UNAVAILABLE",
+                "issue_time_utc": None,
+                "retrieval_time_utc": None,
+                "units": {"precipitation": "mm", "rain": "mm", "temperature_2m": "°C", "relative_humidity_2m": "%"},
+                "last_error": last_error,
+                "next_24h_precipitation_mm": None,
+                "hourly_forecast": [],
+            }
+
+        ret_utc = rows[0]["retrieval_time_utc"]
+        issue_utc = rows[0]["issue_time_utc"]
+        model_id = rows[0]["model_id"]
+        freshness = compute_freshness(
+            ret_utc,
+            live_hours=self.refresher.freshness_live_hours,
+            recent_hours=self.refresher.freshness_recent_hours,
+        )
+        by_time: Dict[str, Dict[str, Any]] = {}
+        units: Dict[str, str] = {}
+        for r in rows:
+            vt = r["valid_time_utc"]
+            units[r["variable"]] = r["unit"]
+            entry = by_time.setdefault(vt, {"valid_time_utc": vt})
+            entry[r["variable"]] = r["value"]
+            entry[f"{r['variable']}_status"] = r["quality_status"]
+
+        hourly = [by_time[k] for k in sorted(by_time.keys())]
+        first_24 = [h.get("precipitation") for h in hourly[:24] if h.get("precipitation") is not None]
+        next_24h = round(sum(first_24), 2) if first_24 else None
+        return {
+            "data_type": "FORECAST",
+            "provider": "open_meteo",
+            "model": model_id,
+            "status": freshness,
+            "freshness": freshness,
+            "location_ref": rows[0]["location_ref"],
+            "latitude": rows[0]["latitude"],
+            "longitude": rows[0]["longitude"],
+            "issue_time_utc": issue_utc,
+            "retrieval_time_utc": ret_utc,
+            "valid_from_utc": hourly[0]["valid_time_utc"] if hourly else None,
+            "valid_to_utc": hourly[-1]["valid_time_utc"] if hourly else None,
+            "units": units,
+            "last_error": last_error,
+            "next_24h_precipitation_mm": next_24h,
+            "hourly_forecast": hourly,
+        }
+
 
 _GLOBAL_DATASTORE: Optional[DashboardDataStore] = None
 
@@ -646,7 +819,16 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             self._send_json(self.datastore.phase7_manifest)
             return
         elif clean_path == "/api/health":
-            self._send_json({"status": "ok", "service": "urban-flood-risk-platform-dashboard"})
+            self._send_json(self.datastore.get_health_payload())
+            return
+        elif clean_path == "/api/sources":
+            self._send_json(self.datastore.get_sources_payload())
+            return
+        elif clean_path == "/api/weather/current":
+            self._send_json(self.datastore.get_weather_current_payload())
+            return
+        elif clean_path == "/api/weather/forecast":
+            self._send_json(self.datastore.get_weather_forecast_payload())
             return
         elif clean_path.startswith("/api/"):
             self._send_error_json(404, "ENDPOINT_NOT_FOUND", "Endpoint not found", f"No route registered for '{clean_path}'")
@@ -722,7 +904,8 @@ def run_dashboard(
     port: int = 8501,
     data_dir: Optional[Path] = None,
     reports_dir: Optional[Path] = None,
-    blocking: bool = True
+    blocking: bool = True,
+    enable_live_refresh: Optional[bool] = None,
 ) -> HTTPServer:
     """
     Launch the operational flood risk intelligence web dashboard.
@@ -745,7 +928,10 @@ def run_dashboard(
     HTTPServer
         The active HTTP server instance.
     """
-    load_dashboard_data(data_dir=data_dir, reports_dir=reports_dir)
+    ds = load_dashboard_data(data_dir=data_dir, reports_dir=reports_dir)
+    do_refresh = blocking if enable_live_refresh is None else enable_live_refresh
+    if do_refresh:
+        ds.refresher.start(run_initial=True)
     static_dir = str(Path(__file__).resolve().parent / "static")
 
     def handler_factory(*args, **kwargs):

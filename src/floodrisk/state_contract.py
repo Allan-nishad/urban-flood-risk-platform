@@ -10,6 +10,10 @@ DATA_STATES = (
     "UNOBSERVED",
     "UNVALIDATED",
     "STALE",
+    "LIVE",
+    "RECENT",
+    "HISTORICAL",
+    "INVALID",
 )
 
 

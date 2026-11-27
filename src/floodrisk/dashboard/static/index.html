@@ -494,6 +494,30 @@
   </div>
   <div id="apiErrorBanner" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; color:#991b1b; padding:10px 18px; font-size:12px; font-weight:600;"></div>
 
+  <!-- Operational Live Weather Data Status Strip (V8 Stage 1) -->
+  <section id="liveWeatherStatusBar" style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; font-size:11px;">
+    <div>
+      <strong style="color:#0f172a;">LIVE FORECAST ADAPTER:</strong>
+      <span id="liveFcstProvider">Loading...</span> | Model: <code id="liveFcstModel">--</code>
+      <div style="color:#64748b; margin-top:2px;">Freshness: <span id="liveFcstFreshness" class="badge badge-info">--</span> | Updated: <span id="liveFcstUpdated">--</span></div>
+    </div>
+    <div>
+      <strong style="color:#0f172a;">FORECAST RAINFALL &amp; VALIDITY:</strong>
+      <span id="liveFcstNext24h">--</span>
+      <div style="color:#64748b; margin-top:2px;">Window: <span id="liveFcstWindow">--</span></div>
+    </div>
+    <div>
+      <strong style="color:#0f172a;">LIVE OBSERVED RAINFALL:</strong>
+      <span id="liveObsStatus" class="badge badge-warning">--</span>
+      <div id="liveObsDetail" style="color:#64748b; margin-top:2px;">Checking live observation feeds...</div>
+    </div>
+    <div>
+      <strong style="color:#0f172a;">SOURCE HEALTH &amp; LAST ERROR:</strong>
+      <span id="liveSourceHealth">--</span>
+      <div id="liveLastError" style="color:#64748b; margin-top:2px;">None</div>
+    </div>
+  </section>
+
   <!-- KPI Row -->
   <section class="kpi-row">
     <div class="kpi-card">
@@ -1748,6 +1772,49 @@
           } catch (p6err) {
             console.warn("Phase 6/7 endpoints loading error:", p6err);
             showApiError(`Phase 6/7 endpoint error: ${p6err.message}`);
+          }
+
+          // Load V8 Stage 1 Live Weather & Source Health
+          try {
+            const [wfRes, wcRes, srcRes] = await Promise.all([
+              fetch('/api/weather/forecast'),
+              fetch('/api/weather/current'),
+              fetch('/api/sources')
+            ]);
+            if (wfRes.ok) {
+              const wf = await wfRes.json();
+              document.getElementById('liveFcstProvider').innerText = wf.provider || 'UNAVAILABLE';
+              document.getElementById('liveFcstModel').innerText = wf.model || 'UNAVAILABLE';
+              document.getElementById('liveFcstFreshness').innerText = wf.freshness || wf.status || 'UNAVAILABLE';
+              if (wf.retrieval_time_utc) {
+                const istStr = new Date(wf.retrieval_time_utc).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+                document.getElementById('liveFcstUpdated').innerText = `${wf.retrieval_time_utc} (${istStr} IST)`;
+              } else {
+                document.getElementById('liveFcstUpdated').innerText = 'UNAVAILABLE';
+              }
+              document.getElementById('liveFcstNext24h').innerText = (wf.next_24h_precipitation_mm !== null && wf.next_24h_precipitation_mm !== undefined)
+                ? `${wf.next_24h_precipitation_mm.toFixed(2)} ${wf.units?.precipitation || 'mm'} (Next 24h)`
+                : 'UNAVAILABLE';
+              document.getElementById('liveFcstWindow').innerText = (wf.valid_from_utc && wf.valid_to_utc)
+                ? `${wf.valid_from_utc} → ${wf.valid_to_utc}`
+                : 'UNAVAILABLE';
+              document.getElementById('liveLastError').innerText = wf.last_error ? `Last error: ${wf.last_error}` : 'No refresh errors';
+            }
+            if (wcRes.ok) {
+              const wc = await wcRes.json();
+              document.getElementById('liveObsStatus').innerText = wc.status || 'UNAVAILABLE';
+              const hb = wc.historical_baseline || {};
+              document.getElementById('liveObsDetail').innerText = `Live gauges ${wc.status}; Phase 4.3 baseline (${hb.observed_rainfall_24h_mm ?? '--'} mm) is ${hb.status || 'STALE'}.`;
+            }
+            if (srcRes.ok) {
+              const src = await srcRes.json();
+              const list = src.sources || [];
+              const liveCnt = list.filter(s => s.status === 'LIVE' || s.status === 'RECENT').length;
+              document.getElementById('liveSourceHealth').innerText = `${liveCnt}/${list.length} LIVE/RECENT (${list.map(s => `${s.source_id}:${s.status}`).join(', ')})`;
+            }
+          } catch (werr) {
+            console.warn("Live weather status load error:", werr);
+            showApiError(`Live weather status error: ${werr.message}`);
           }
 
       } catch (err) {

@@ -45,6 +45,7 @@ data/interim/*
 !data/interim/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/state/
 
 # Local IDE configuration
 .vscode/
