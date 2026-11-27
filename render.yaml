@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: urban-flood-risk-platform
+    runtime: docker
+    branch: upgrade/v8-operational-ai
+    healthCheckPath: /api/ready
+    envVars:
+      - key: FLOODRISK_ADMIN_TOKEN
+        generateValue: true
+      - key: FLOODRISK_DB_PATH
+        value: /app/data/state/floodrisk_v8.db
+      - key: FLOODRISK_BACKUP_DIR
+        value: /app/data/state/backups
+      - key: FLOODRISK_MODEL_DIR
+        value: /app/models/v8_experimental
+      - key: FLOODRISK_REFRESH_INTERVAL_S
+        value: "1800"
+      - key: FLOODRISK_LOG_LEVEL
+        value: INFO
+      - key: FLOODRISK_ALLOWED_ORIGIN
+        value: "*"

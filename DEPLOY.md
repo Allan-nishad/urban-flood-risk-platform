@@ -6,7 +6,33 @@ This guide explains how to run and deploy the **Bengaluru Urban Flood Risk Intel
 
 ---
 
-## Option 1 — Deploy with Docker (Recommended for Hosting / VPS)
+## Option 1 — Deploy on Render (Easiest for Your Friend)
+
+Render automatically handles HTTPS, domain (`https://<app-name>.onrender.com`), and Docker builds.
+
+### Step 1: Connect GitHub Repo
+1. Log in to [Render](https://render.com) and click **New + → Blueprint** (or **New + → Web Service**).
+2. Connect your GitHub account and select this repository (`branch: upgrade/v8-operational-ai`).
+   - If using **Blueprint**, Render reads `render.yaml` automatically and configures everything (including generating `FLOODRISK_ADMIN_TOKEN` and setting Health Check Path to `/api/ready`).
+   - If creating a **Web Service** manually:
+     - **Runtime:** `Docker`
+     - **Branch:** `upgrade/v8-operational-ai`
+     - **Health Check Path:** `/api/ready`
+     - **Environment Variables:**
+       - `FLOODRISK_ADMIN_TOKEN` = *(any strong secret password)*
+       - `FLOODRISK_ALLOWED_ORIGIN` = `https://<your-render-app>.onrender.com`
+       - `FLOODRISK_REFRESH_INTERVAL_S` = `1800`
+
+### Step 2: Optional Persistent Storage (Paid Starter+ Plan)
+- On Render's **Starter** plan or higher, add a **Disk** mounted at `/app/data/state` (`1 GB`) so SQLite alert history and backups survive redeploys.
+- On Render's **Free** tier, it still runs and fetches live Open-Meteo forecasts automatically on startup, but SQLite state resets whenever the free container spins down or redeploys.
+
+### Step 3: Verify Live URL
+Open `https://<your-render-app>.onrender.com` and check `/api/health` and `/api/ready`.
+
+---
+
+## Option 2 — Deploy with Docker (VPS / Self-Hosted)
 
 ### Prerequisites on the Server
 - **Git**
