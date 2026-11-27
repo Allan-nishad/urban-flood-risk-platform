@@ -10,6 +10,32 @@ from typing import Any, Dict, List, Optional
 class AlertStore:
     """Thread-safe SQLite store for internal candidate alerts, audit logs, and evaluation runs."""
 
+    ALLOWED_UPDATE_COLUMNS = frozenset({
+        "rule_id",
+        "severity",
+        "qualification_status",
+        "lifecycle_state",
+        "title",
+        "explanation",
+        "triggering_inputs_json",
+        "data_source",
+        "data_freshness",
+        "forecast_issue_time_utc",
+        "forecast_valid_from_utc",
+        "forecast_valid_to_utc",
+        "lead_time_hours",
+        "experimental_ml_score",
+        "experimental_ml_status",
+        "updated_at_utc",
+        "expires_at_utc",
+        "acknowledged_by",
+        "acknowledged_at_utc",
+        "resolved_by",
+        "resolved_at_utc",
+        "resolution_note",
+        "evaluation_count",
+    })
+
     def __init__(self, db_path: Path | str = Path("data/state/floodrisk_v8.db")):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -164,6 +190,9 @@ class AlertStore:
         mapped = dict(fields)
         if "triggering_inputs" in mapped:
             mapped["triggering_inputs_json"] = json.dumps(mapped.pop("triggering_inputs"))
+        bad_cols = set(mapped.keys()) - self.ALLOWED_UPDATE_COLUMNS
+        if bad_cols:
+            raise ValueError(f"Disallowed alert update column(s): {sorted(bad_cols)}")
         cols = ", ".join(f"{k} = ?" for k in mapped.keys())
         vals = list(mapped.values()) + [alert_id]
         with self._lock, self._conn:

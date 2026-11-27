@@ -428,9 +428,11 @@ class OperationalAlertEngine:
             "status": "AVAILABLE",
             "public_dispatch_enabled": self.public_dispatch_enabled,
             "spatial_forcing_scope": "REGIONAL_SINGLE_ANCHOR_BENGALURU",
+            "multi_zone_spatial_scope": "MULTI_ANCHOR_SECTOR_0_25_DEG",
             "spatial_coverage_note": (
-                "Forecast forcing is derived from a single Bengaluru centroid anchor (12.9716, 77.5946) "
-                "combined with cell-level static terrain susceptibility; not 1,170 independent local forecasts."
+                "Forecast forcing is assigned from Bengaluru sector anchors (snapping to 2 distinct "
+                "native 0.25-deg ECMWF IFS nodes) combined with cell-level static terrain susceptibility; "
+                "not 1,170 independent local forecasts."
             ),
             "warning_disclaimer": RESEARCH_DISCLAIMER,
             "ml_qualification_gate": "BLOCKED_EXPERIMENTAL_MODEL",

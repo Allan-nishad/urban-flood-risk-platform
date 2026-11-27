@@ -67,6 +67,7 @@ class LiveWeatherRefresher:
 
     def refresh_once(self) -> Dict[str, Any]:
         """Attempt forecast retrieval with exponential backoff; never hides failures."""
+        t0 = time.monotonic()
         attempt_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         last_err: Optional[str] = None
 
@@ -86,6 +87,19 @@ class LiveWeatherRefresher:
                     error=None,
                     records_written=written,
                 )
+                dur_ms = int((time.monotonic() - t0) * 1000)
+                if hasattr(self.store, "record_refresh_history"):
+                    self.store.record_refresh_history(
+                        provider=res["provider"],
+                        model_id=res["model_id"],
+                        attempt_utc=res["retrieval_time_utc"],
+                        issue_time_utc=res.get("issue_time_utc"),
+                        success=True,
+                        status="LIVE",
+                        zones_fetched=int(res.get("zones_fetched", 1)),
+                        records_written=written,
+                        duration_ms=dur_ms,
+                    )
                 summary = {
                     "success": True,
                     "provider": res["provider"],
@@ -93,6 +107,7 @@ class LiveWeatherRefresher:
                     "retrieval_time_utc": res["retrieval_time_utc"],
                     "records_written": written,
                     "status": "LIVE",
+                    "duration_ms": dur_ms,
                 }
                 if self.on_refresh_success is not None:
                     try:
@@ -127,6 +142,19 @@ class LiveWeatherRefresher:
             error=last_err,
             records_written=0,
         )
+        dur_ms = int((time.monotonic() - t0) * 1000)
+        if hasattr(self.store, "record_refresh_history"):
+            self.store.record_refresh_history(
+                provider="open_meteo",
+                model_id=self.adapter.preferred_model,
+                attempt_utc=attempt_utc,
+                success=False,
+                status=status,
+                zones_fetched=0,
+                records_written=0,
+                duration_ms=dur_ms,
+                error=last_err,
+            )
         return {
             "success": False,
             "provider": "open_meteo",
@@ -134,6 +162,7 @@ class LiveWeatherRefresher:
             "attempt_utc": attempt_utc,
             "status": status,
             "error": last_err,
+            "duration_ms": dur_ms,
         }
 
     def start(self, run_initial: bool = True) -> None:

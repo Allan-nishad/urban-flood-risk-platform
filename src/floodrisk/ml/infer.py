@@ -58,9 +58,20 @@ class ExperimentalFloodInference:
         qual = self.metadata.get("qualification_status", "EXPERIMENTAL_UNVALIDATED")
 
         preds = []
+        importances = self.metadata.get("feature_importances") or {}
+        top_feats = sorted(importances.items(), key=lambda kv: kv[1], reverse=True)[:5]
         for idx, score in enumerate(raw_scores):
             row = df_in.iloc[idx]
             missing_inputs = [c for c in FEATURE_COLUMNS if pd.isna(row[c])]
+            explanations = [
+                {
+                    "feature": fname,
+                    "importance": fimp,
+                    "value": None if pd.isna(row[fname]) else round(float(row[fname]), 4),
+                }
+                for fname, fimp in top_feats
+                if fname in row.index
+            ]
             preds.append({
                 "grid_id": str(row.get("grid_id", f"row_{idx}")),
                 "experimental_score": round(float(score), 4),
@@ -68,6 +79,7 @@ class ExperimentalFloodInference:
                 "qualification_status": qual,
                 "warning_gate": self.metadata.get("warning_gate", "BLOCKED_EXPERIMENTAL_MODEL"),
                 "missing_inputs": missing_inputs,
+                "top_contributing_features": explanations,
                 "uncertainty_note": "Experimental uncalibrated score trained on 48 records; not a flood probability.",
             })
 
@@ -75,6 +87,7 @@ class ExperimentalFloodInference:
             "status": "AVAILABLE",
             "model_name": self.metadata.get("model_name"),
             "model_version": self.metadata.get("model_version"),
+            "data_version": self.metadata.get("data_version"),
             "qualification_status": qual,
             "warning_gate": self.metadata.get("warning_gate", "BLOCKED_EXPERIMENTAL_MODEL"),
             "prediction_timestamp_utc": ts_utc,

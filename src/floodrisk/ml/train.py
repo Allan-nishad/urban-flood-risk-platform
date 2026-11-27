@@ -1,6 +1,7 @@
 """Reproducible experimental ML training, group-aware validation, and model serialization."""
 
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -75,6 +76,43 @@ def _build_candidate_models(seed: int = 42) -> Dict[str, Any]:
     }
 
 
+def _assess_calibration_and_uncertainty(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    seed: int = 42,
+    n_boot: int = 200,
+) -> Dict[str, Any]:
+    """Assess out-of-fold probability calibration and bootstrap CI on AUC metrics."""
+    if len(y_true) < 10 or len(np.unique(y_true)) < 2:
+        return {"status": "INSUFFICIENT_SAMPLE_SIZE", "n_total": int(len(y_true))}
+    obs_rate = float(np.mean(y_true))
+    pred_mean = float(np.mean(y_prob))
+    rng = np.random.default_rng(seed)
+    rocs: List[float] = []
+    prs: List[float] = []
+    n = len(y_true)
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, size=n)
+        yt = y_true[idx]
+        yp = y_prob[idx]
+        if len(np.unique(yt)) < 2:
+            continue
+        rocs.append(float(roc_auc_score(yt, yp)))
+        prs.append(float(average_precision_score(yt, yp)))
+    return {
+        "status": "EXPLORATORY_SMALL_SAMPLE",
+        "n_total": int(n),
+        "observed_positive_rate": round(obs_rate, 4),
+        "mean_predicted_probability": round(pred_mean, 4),
+        "calibration_bias": round(pred_mean - obs_rate, 4),
+        "brier_score": round(float(brier_score_loss(y_true, y_prob)), 4),
+        "bootstrap_iterations": len(rocs),
+        "roc_auc_ci95": [round(float(np.percentile(rocs, 2.5)), 4), round(float(np.percentile(rocs, 97.5)), 4)] if rocs else None,
+        "pr_auc_ci95": [round(float(np.percentile(prs, 2.5)), 4), round(float(np.percentile(prs, 97.5)), 4)] if prs else None,
+        "note": "Small sample (n=48) and single-group negative controls prevent formal clinical/operational calibration.",
+    }
+
+
 def _evaluate_spatial_group_cv(model_factory, X: pd.DataFrame, y: pd.Series, groups: pd.Series, n_splits: int = 5) -> Dict[str, Any]:
     n_unique_groups = groups.nunique()
     k = min(n_splits, n_unique_groups)
@@ -91,7 +129,9 @@ def _evaluate_spatial_group_cv(model_factory, X: pd.DataFrame, y: pd.Series, gro
         clf.fit(X.iloc[train_idx], y_tr)
         oof_probs[test_idx] = clf.predict_proba(X.iloc[test_idx])[:, 1]
 
-    return _compute_metrics(y.values, oof_probs)
+    metrics = _compute_metrics(y.values, oof_probs)
+    metrics["calibration_and_uncertainty"] = _assess_calibration_and_uncertainty(y.values, oof_probs)
+    return metrics
 
 
 def _evaluate_temporal_holdout_recall(model_factory, X: pd.DataFrame, y: pd.Series, meta: pd.DataFrame) -> Dict[str, Any]:
@@ -194,12 +234,15 @@ def train_and_evaluate_experimental_models(
         importances = {col: round(float(abs(val)), 4) for col, val in zip(FEATURE_COLUMNS, est.coef_[0])}
 
     model_version = "v8.0-exp-rf-20261127" if selected_name == "random_forest" else f"v8.0-exp-{selected_name}-20261127"
+    data_sha = hashlib.sha256(Path(dataset_path).read_bytes()).hexdigest()[:16] if Path(dataset_path).is_file() else "unknown"
+    data_version = f"stage2-event-grid-{len(df_raw)}rows-{data_sha}"
     model_path = out_dir / "flood_risk_model_v8_exp.joblib"
     joblib.dump(final_pipeline, model_path)
 
     metadata = {
         "model_name": selected_name,
         "model_version": model_version,
+        "data_version": data_version,
         "model_artifact_path": str(model_path).replace("\\", "/"),
         "trained_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "random_seed": seed,

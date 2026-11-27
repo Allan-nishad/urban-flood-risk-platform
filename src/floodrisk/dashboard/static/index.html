@@ -903,6 +903,8 @@
           <tr><td>Water Fraction</td><td id="inspWater">--</td></tr>
           <tr><td>Static Score</td><td id="inspStaticScore">--</td></tr>
           <tr><td>Static Domain Rank</td><td id="inspStaticRank">--</td></tr>
+          <tr><td>Topographic Wetness Index</td><td id="inspTwi">--</td></tr>
+          <tr><td>Upstream Contributing Area</td><td id="inspUpa">--</td></tr>
         </table>
 
         <div class="section-title">
@@ -944,6 +946,8 @@
           Reference: ECMWF IFS / GFS Seamless. Decoupled issue time prevents forward leakage.
         </p>
         <div id="forecastBars"></div>
+        <div class="section-title" style="margin-top:16px;">Live 1h&ndash;72h Forecast Risk Assessment</div>
+        <div id="cellRiskTimeline" style="font-size:11px; color:var(--text-muted);">Select a cell to load 1h&ndash;72h forecast risk timeline.</div>
       </div>
 
       <!-- Incidents Tab -->
@@ -1011,7 +1015,12 @@
               <span class="chip chip-danger" style="font-size:10px;">DISABLED</span>
             </div>
           </div>
-          <button class="action-btn" id="evalAlertsNowBtn" onclick="evaluateAlertsNow()">Re-evaluate Now</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input id="adminTokenInput" type="password" placeholder="Admin token (if enabled)"
+              style="background:var(--bg-primary); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; padding:5px 8px; font-size:11px; width:165px;"
+              onchange="sessionStorage.setItem('floodrisk_admin_token', this.value)" />
+            <button class="action-btn" id="evalAlertsNowBtn" onclick="evaluateAlertsNow()">Re-evaluate Now</button>
+          </div>
         </div>
 
         <div class="section-heading">
@@ -1085,6 +1094,29 @@
               <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:16px;">
                 <span class="skeleton" style="width:160px;height:12px;display:inline-block;"></span>
               </td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-heading" style="margin-top:18px;">
+          <span class="track-label" style="background:#0284c7; color:#fff;">Ingestion</span>
+          Forecast Refresh History (Open-Meteo ECMWF IFS)
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Attempt (UTC)</th>
+                <th>Model</th>
+                <th>Status</th>
+                <th>Zones</th>
+                <th>Records</th>
+                <th>Duration</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="refreshHistoryTbody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">Loading refresh history...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1727,6 +1759,8 @@
       document.getElementById('inspWater').innerText = p.water_fraction !== null && p.water_fraction !== undefined ? `${(p.water_fraction * 100).toFixed(1)}%` : "UNAVAILABLE";
       document.getElementById('inspStaticScore').innerText = fmtVal(p.static_susceptibility_score, "", 4);
       document.getElementById('inspStaticRank').innerText = p.static_susceptibility_rank !== null && p.static_susceptibility_rank !== undefined ? `#${p.static_susceptibility_rank} / 1,170` : "UNAVAILABLE";
+      document.getElementById('inspTwi').innerText = fmtVal(p.topographic_wetness_index, "", 2);
+      document.getElementById('inspUpa').innerText = fmtVal(p.upstream_contributing_area_km2, " km\u00b2", 2);
 
       document.getElementById('inspObs24h').innerText = fmtVal(p.observed_rainfall_24h_mm, " mm", 1);
       document.getElementById('inspObsApi').innerText = fmtVal(p.observed_api_decay_mm, " mm", 1);
@@ -1753,6 +1787,41 @@
       document.getElementById('inspIncCat').innerText = p.historical_incident_categories || "UNOBSERVED";
 
       renderForecastTimeline(p);
+      loadCellRiskTimeline(p.grid_id);
+    }
+
+    async function loadCellRiskTimeline(gridId) {
+      const container = document.getElementById('cellRiskTimeline');
+      if (!container || !gridId) return;
+      try {
+        const res = await fetch(`/api/risk/forecast?grid_id=${encodeURIComponent(gridId)}`);
+        if (!res.ok) {
+          container.innerText = 'Forecast risk timeline unavailable.';
+          return;
+        }
+        const data = await res.json();
+        const rows = data.timeline || [];
+        if (!rows.length) {
+          container.innerText = 'No horizon data.';
+          return;
+        }
+        container.innerHTML = `
+          <table class="meta-table" style="font-size:10px;">
+            <tr><th style="text-align:left;color:var(--text-muted);">Horizon</th><th style="text-align:right;color:var(--text-muted);">Rain</th><th style="text-align:right;color:var(--text-muted);">Index</th><th style="text-align:right;color:var(--text-muted);">Category</th></tr>
+            ${rows.map(r => `
+              <tr>
+                <td>${r.horizon_hours}h</td>
+                <td style="text-align:right;font-family:var(--font-mono);">${r.rainfall_accumulation_mm !== null ? r.rainfall_accumulation_mm.toFixed(1) + ' mm' : 'N/A'}</td>
+                <td style="text-align:right;font-family:var(--font-mono);">${r.risk_prioritization_index !== null ? r.risk_prioritization_index.toFixed(3) : '--'}</td>
+                <td style="text-align:right;font-weight:700;">${r.risk_category}</td>
+              </tr>`).join('')}
+          </table>
+          <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">
+            Anchor: ${rows[0].forecast_zone_id || 'N/A'} (${rows[0].spatial_coverage_status}) &bull; Non-probabilistic index
+          </div>`;
+      } catch (e) {
+        container.innerText = 'Error loading risk timeline.';
+      }
     }
 
     function renderForecastTimeline(p) {
@@ -2037,6 +2106,9 @@
             fetch('/api/phase7/manifest')
           ]);
 
+          if (p6sumRes.ok) {
+            await p6sumRes.json();
+          }
           if (p6nwpRes.ok) {
             const p6nwp = await p6nwpRes.json();
             document.getElementById('p6NwpVal').innerText = `${p6nwp.total_grib2_slices ?? '--'} Slices / ${p6nwp.total_wmo_messages_decoded ?? '--'} Msgs`;
@@ -2260,13 +2332,32 @@
 
     async function loadAlerts() {
       try {
-        const [sumRes, listRes, cluRes, covRes, hlthRes] = await Promise.all([
+        const [sumRes, listRes, cluRes, covRes, hlthRes, histRes] = await Promise.all([
           fetch('/api/alerts/summary'),
           fetch('/api/alerts?limit=200'),
           fetch('/api/alerts/clusters'),
           fetch('/api/spatial/coverage'),
-          fetch('/api/health')
+          fetch('/api/health'),
+          fetch('/api/weather/history?limit=15')
         ]);
+        if (histRes.ok) {
+          const histData = await histRes.json();
+          const hrows = histData.history || [];
+          const htbody = document.getElementById('refreshHistoryTbody');
+          if (htbody) {
+            htbody.innerHTML = hrows.length === 0
+              ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">No refresh attempts recorded yet.</td></tr>'
+              : hrows.map(r => `<tr>
+                  <td style="font-family:var(--font-mono); font-size:10px;">${r.attempt_utc}</td>
+                  <td style="font-family:var(--font-mono); font-size:10px;">${r.model_id}</td>
+                  <td><span class="state-badge ${r.success ? 'state-resolved' : 'state-active'}">${r.status}</span></td>
+                  <td>${r.zones_fetched}</td>
+                  <td>${r.records_written}</td>
+                  <td>${r.duration_ms} ms</td>
+                  <td style="font-size:10px; color:var(--text-muted);">${r.error || 'None'}</td>
+                </tr>`).join('');
+          }
+        }
         if (covRes.ok) {
           const cov = await covRes.json();
           const nodes = (cov.distinct_native_model_nodes || []).length;
@@ -2351,9 +2442,16 @@
       }
     }
 
+    function getAuthHeaders() {
+      const headers = {'Content-Type': 'application/json'};
+      const tok = (document.getElementById('adminTokenInput')?.value || sessionStorage.getItem('floodrisk_admin_token') || '').trim();
+      if (tok) headers['X-Admin-Token'] = tok;
+      return headers;
+    }
+
     async function acknowledgeAlert(alertId) {
       await fetch(`/api/alerts/${encodeURIComponent(alertId)}/acknowledge`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({actor: 'dashboard_operator'})
       });
       await loadAlerts();
@@ -2361,7 +2459,7 @@
 
     async function resolveAlert(alertId) {
       await fetch(`/api/alerts/${encodeURIComponent(alertId)}/resolve`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({actor: 'dashboard_operator', note: 'Resolved via dashboard'})
       });
       await loadAlerts();
@@ -2369,7 +2467,7 @@
 
     async function acknowledgeCluster(clusterId) {
       await fetch(`/api/alerts/clusters/${encodeURIComponent(clusterId)}/acknowledge`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({actor: 'dashboard_operator'})
       });
       await loadAlerts();
@@ -2377,7 +2475,7 @@
 
     async function resolveCluster(clusterId) {
       await fetch(`/api/alerts/clusters/${encodeURIComponent(clusterId)}/resolve`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: getAuthHeaders(),
         body: JSON.stringify({actor: 'dashboard_operator', note: 'Cluster resolved via dashboard'})
       });
       await loadAlerts();
@@ -2387,7 +2485,7 @@
       const btn = document.getElementById('evalAlertsNowBtn');
       btn.disabled = true;
       btn.innerText = 'Evaluating...';
-      await fetch('/api/alerts/evaluate', {method: 'POST'});
+      await fetch('/api/alerts/evaluate', {method: 'POST', headers: getAuthHeaders()});
       await loadAlerts();
       btn.disabled = false;
       btn.innerText = 'Re-evaluate Now';

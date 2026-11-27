@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+data/raw
+data/interim
+data/external
+data/state/*.db*
+data/state/backups/*
+notebooks
+scratch
+*.docx

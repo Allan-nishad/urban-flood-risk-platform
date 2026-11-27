@@ -4,10 +4,12 @@ Provides lightweight HTTP REST endpoints and serves the interactive Leaflet surv
 """
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import hmac
 import json
 import logging
 import os
 from pathlib import Path
+import signal
 import socketserver
 import threading
 from typing import Dict, Any, Optional, List, Tuple
@@ -16,6 +18,21 @@ import pandas as pd
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+def configure_logging(level: Optional[str] = None) -> None:
+    """Configure structured operational logging for the dashboard service."""
+    root = logging.getLogger()
+    if root.handlers:
+        return
+    lvl_name = (level or os.environ.get("FLOODRISK_LOG_LEVEL", "INFO")).upper()
+    lvl = getattr(logging, lvl_name, logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter("%(asctime)sZ %(levelname)s [%(name)s] %(message)s", datefmt="%Y-%m-%dT%H:%M:%S")
+    )
+    root.addHandler(handler)
+    root.setLevel(lvl)
 
 
 def clean_val_for_json(val: Any) -> Any:
@@ -60,7 +77,11 @@ class DashboardDataStore:
         else:
             db_p = Path("data/state/floodrisk_v8.db")
         self.backup_dir = Path(os.environ.get("FLOODRISK_BACKUP_DIR", "data/state/backups"))
+        self.model_dir = Path(os.environ.get("FLOODRISK_MODEL_DIR", "models/v8_experimental"))
+        self.allowed_origin: str = os.environ.get("FLOODRISK_ALLOWED_ORIGIN", "http://127.0.0.1:8501")
         self.admin_token: Optional[str] = os.environ.get("FLOODRISK_ADMIN_TOKEN") or None
+        self._ml_inference: Optional[Any] = None
+        self._hydro_lookup: Dict[str, Dict[str, Any]] = {}
         refresh_s = float(os.environ.get("FLOODRISK_REFRESH_INTERVAL_S", "1800"))
         from ..alerts import AlertStore, OperationalAlertEngine
         from ..live import LiveWeatherRefresher, LiveWeatherStore, OpenMeteoForecastAdapter
@@ -112,6 +133,40 @@ class DashboardDataStore:
             for _, row in df_dyn.iterrows():
                 dyn_lookup[row["grid_id"]] = row.to_dict()
 
+        # Pre-load & cache Phase 6/7 hydrology lookup and experimental ML model
+        self._hydro_lookup = {}
+        p6_h = self.data_dir / "phase6" / "hydrology" / "topographic_routing_static_features.parquet"
+        p7_h = self.data_dir / "phase7" / "hydrology" / "phase7_hydrology_comparison.parquet"
+        if p6_h.is_file():
+            try:
+                for _, hr in pd.read_parquet(p6_h).iterrows():
+                    self._hydro_lookup[str(hr["grid_id"])] = {
+                        "elevation_m": float(hr["elevation_m"]),
+                        "slope_deg": float(hr["slope_deg"]),
+                        "upstream_contributing_area_km2": float(hr["upstream_contributing_area_km2"]),
+                        "topographic_wetness_index": float(hr["topographic_wetness_index"]),
+                    }
+            except Exception as e:
+                logger.warning("Failed to cache Phase 6 hydrology features: %s", e)
+        if p7_h.is_file():
+            try:
+                for _, hr7 in pd.read_parquet(p7_h).iterrows():
+                    entry = self._hydro_lookup.setdefault(str(hr7["grid_id"]), {})
+                    entry["depression_depth_m"] = float(hr7["depression_depth_m"])
+                    entry["is_closed_sink"] = int(hr7["is_closed_sink"])
+            except Exception as e:
+                logger.warning("Failed to cache Phase 7 hydrology features: %s", e)
+
+        try:
+            from ..ml import ExperimentalFloodInference
+            self._ml_inference = ExperimentalFloodInference(
+                model_path=self.model_dir / "flood_risk_model_v8_exp.joblib",
+                metadata_path=self.model_dir / "model_metadata.json",
+            )
+        except Exception as e:
+            logger.warning("Failed to cache experimental ML model: %s", e)
+            self._ml_inference = None
+
         # 2. Grid GeoJSON merge
         if grid_geojson_path.is_file():
             with open(grid_geojson_path, "r", encoding="utf-8") as f:
@@ -121,6 +176,7 @@ class DashboardDataStore:
             for feat in raw_gj.get("features", []):
                 gid = feat["properties"].get("grid_id")
                 dyn_props = dyn_lookup.get(gid, {})
+                hyd_props = self._hydro_lookup.get(str(gid), {})
                 merged_props = {
                     "grid_id": gid,
                     "col_idx": feat["properties"].get("col_idx"),
@@ -137,6 +193,9 @@ class DashboardDataStore:
                     "water_fraction": clean_val_for_json(dyn_props.get("water_fraction")),
                     "static_susceptibility_score": clean_val_for_json(dyn_props.get("static_susceptibility_score")),
                     "static_susceptibility_rank": clean_val_for_json(dyn_props.get("static_susceptibility_rank")),
+                    "topographic_wetness_index": clean_val_for_json(hyd_props.get("topographic_wetness_index")),
+                    "upstream_contributing_area_km2": clean_val_for_json(hyd_props.get("upstream_contributing_area_km2")),
+                    "slope_deg": clean_val_for_json(hyd_props.get("slope_deg")),
                     # Observed Layer (Phase 4.3 constant 12.5mm baseline -> STALE)
                     "observed_rainfall_24h_mm": clean_val_for_json(dyn_props.get("observed_rainfall_24h_mm")),
                     "observed_api_decay_mm": clean_val_for_json(dyn_props.get("observed_api_decay_mm")),
@@ -298,7 +357,7 @@ class DashboardDataStore:
                 logger.warning(f"Error loading Phase 6 manifest: {e}")
 
         # 7.1 Phase 6A: NWP Provenance & Forecast Archive
-        p6_nwp_prov_path = Path("data/processed/phase6/nwp/nwp_forecast_provenance.parquet")
+        p6_nwp_prov_path = self.data_dir / "phase6" / "nwp" / "nwp_forecast_provenance.parquet"
         if p6_nwp_prov_path.is_file():
             try:
                 df_prov = pd.read_parquet(p6_nwp_prov_path)
@@ -319,8 +378,8 @@ class DashboardDataStore:
                 logger.warning(f"Error loading Phase 6 NWP provenance: {e}")
 
         # 7.2 Phase 6B: Ground Rainfall Observations & Gauge Validation
-        p6_reg_path = Path("data/processed/phase6/ground_rainfall/rain_gauge_station_registry.parquet")
-        p6_val_path = Path("data/processed/phase6/ground_rainfall/gfs_vs_gauge_validation_metrics.parquet")
+        p6_reg_path = self.data_dir / "phase6" / "ground_rainfall" / "rain_gauge_station_registry.parquet"
+        p6_val_path = self.data_dir / "phase6" / "ground_rainfall" / "gfs_vs_gauge_validation_metrics.parquet"
         if p6_reg_path.is_file() and p6_val_path.is_file():
             try:
                 df_reg = pd.read_parquet(p6_reg_path)
@@ -347,9 +406,9 @@ class DashboardDataStore:
                 logger.warning(f"Error loading Phase 6 ground rainfall: {e}")
 
         # 7.3 Phase 6C: Independent Flood Evidence & ML Gate
-        p6_gt_path = Path("data/processed/phase6/flood_evidence/flood_validation_ground_truth_matrix.parquet")
-        p6_gate_path = Path("data/processed/phase6/flood_evidence/flood_evidence_gate_audit.parquet")
-        p6_inc_path = Path("data/processed/phase6/flood_evidence/independent_flood_incident_inventory.parquet")
+        p6_gt_path = self.data_dir / "phase6" / "flood_evidence" / "flood_validation_ground_truth_matrix.parquet"
+        p6_gate_path = self.data_dir / "phase6" / "flood_evidence" / "flood_evidence_gate_audit.parquet"
+        p6_inc_path = self.data_dir / "phase6" / "flood_evidence" / "independent_flood_incident_inventory.parquet"
         if p6_gt_path.is_file() and p6_gate_path.is_file():
             try:
                 df_gt = pd.read_parquet(p6_gt_path)
@@ -377,10 +436,10 @@ class DashboardDataStore:
                 logger.warning(f"Error loading Phase 6 flood evidence: {e}")
 
         # 7.4 Phase 6D: Authentic Sentinel-1 SAR Processing
-        p6_sar_reg_path = Path("data/processed/phase6/sar/sar_scene_audit_registry.parquet")
-        p6_sar_feat_path = Path("data/processed/phase6/sar/sar_flood_signature_features.parquet")
-        p6_sar_xval_path = Path("data/processed/phase6/sar/sar_ground_truth_cross_validation.parquet")
-        p7_sar_comp_path = Path("data/processed/phase7/sar_validation/phase7_sar_evidence_comparison.parquet")
+        p6_sar_reg_path = self.data_dir / "phase6" / "sar" / "sar_scene_audit_registry.parquet"
+        p6_sar_feat_path = self.data_dir / "phase6" / "sar" / "sar_flood_signature_features.parquet"
+        p6_sar_xval_path = self.data_dir / "phase6" / "sar" / "sar_ground_truth_cross_validation.parquet"
+        p7_sar_comp_path = self.data_dir / "phase7" / "sar_validation" / "phase7_sar_evidence_comparison.parquet"
         if p6_sar_reg_path.is_file() and p6_sar_feat_path.is_file() and p6_sar_xval_path.is_file():
             try:
                 df_sreg = pd.read_parquet(p6_sar_reg_path)
@@ -416,8 +475,8 @@ class DashboardDataStore:
                 logger.warning(f"Error loading Phase 6 SAR features: {e}")
 
         # 7.5 Phase 6E: Physical Hydrology & Topographic Routing
-        p6_hyd_stat_path = Path("data/processed/phase6/hydrology/topographic_routing_static_features.parquet")
-        p6_hyd_dyn_path = Path("data/processed/phase6/hydrology/dynamic_hydrological_inundation_potential.parquet")
+        p6_hyd_stat_path = self.data_dir / "phase6" / "hydrology" / "topographic_routing_static_features.parquet"
+        p6_hyd_dyn_path = self.data_dir / "phase6" / "hydrology" / "dynamic_hydrological_inundation_potential.parquet"
         if p6_hyd_stat_path.is_file() and p6_hyd_dyn_path.is_file():
             try:
                 df_hstat = pd.read_parquet(p6_hyd_stat_path)
@@ -567,7 +626,7 @@ class DashboardDataStore:
         om_h = next((h for h in health_rows if h.get("provider") == "open_meteo"), {})
         last_success = om_h.get("last_success_utc")
         consec_fail = int(om_h.get("consecutive_failures", 0))
-        ml_ok = Path("models/v8_experimental/flood_risk_model_v8_exp.joblib").is_file()
+        ml_ok = (self.model_dir / "flood_risk_model_v8_exp.joblib").is_file()
         spatial_cov = self.get_spatial_coverage_payload()
         alert_sum = self.alert_engine.get_summary()
 
@@ -578,12 +637,14 @@ class DashboardDataStore:
         else:
             overall = "DEGRADED"
 
+        sanitized_db = dict(db_health)
+        sanitized_db.pop("db_path", None)
         return {
             "status": overall,
             "service": "urban-flood-risk-platform-dashboard",
             "database_status": "AVAILABLE" if db_ok else "UNAVAILABLE",
-            "database": db_health,
-            "database_path": str(self.weather_store.db_path).replace("\\", "/"),
+            "database": sanitized_db,
+            "database_name": self.weather_store.db_path.name,
             "stored_weather_records": self.weather_store.count_records(),
             "scheduler_running": self.refresher.is_running,
             "forecast_freshness": fc_freshness,
@@ -700,7 +761,7 @@ class DashboardDataStore:
         }
 
     def get_weather_forecast_payload(self) -> Dict[str, Any]:
-        from ..live import compute_freshness
+        from ..live import compute_freshness, compute_rainfall_windows
         rows = self.weather_store.get_latest_forecast()
         health = self.weather_store.get_provider_health("open_meteo")
         last_error = health[0].get("last_error") if health else None
@@ -716,6 +777,7 @@ class DashboardDataStore:
                 "units": {"precipitation": "mm", "rain": "mm", "temperature_2m": "°C", "relative_humidity_2m": "%"},
                 "last_error": last_error,
                 "next_24h_precipitation_mm": None,
+                "rainfall_windows": compute_rainfall_windows([]),
                 "hourly_forecast": [],
             }
 
@@ -737,16 +799,22 @@ class DashboardDataStore:
             entry[f"{r['variable']}_status"] = r["quality_status"]
 
         hourly = [by_time[k] for k in sorted(by_time.keys())]
-        first_24 = [h.get("precipitation") for h in hourly[:24] if h.get("precipitation") is not None]
-        next_24h = round(sum(first_24), 2) if first_24 else None
+        windows = compute_rainfall_windows(hourly)
+        next_24h = windows["24h"]["cumulative_mm"]
+        zones_grouped = self.weather_store.get_latest_forecasts_by_zone()
+        multi_zone = len(zones_grouped) > 1
         return {
             "data_type": "FORECAST",
             "provider": "open_meteo",
             "model": model_id,
             "status": freshness,
             "freshness": freshness,
-            "spatial_forcing_scope": "REGIONAL_SINGLE_ANCHOR_BENGALURU",
-            "spatial_coverage_note": "Single Bengaluru centroid anchor; not 1,170 independent cell-level forecasts.",
+            "spatial_forcing_scope": "MULTI_ANCHOR_SECTOR_0_25_DEG" if multi_zone else "REGIONAL_SINGLE_ANCHOR_BENGALURU",
+            "spatial_coverage_note": (
+                f"{len(zones_grouped)} Bengaluru sector anchors on 0.25-deg ECMWF IFS grid; not 1,170 independent cell-level forecasts."
+                if multi_zone
+                else "Single Bengaluru centroid anchor; not 1,170 independent cell-level forecasts."
+            ),
             "location_ref": rows[0]["location_ref"],
             "latitude": rows[0]["latitude"],
             "longitude": rows[0]["longitude"],
@@ -757,19 +825,62 @@ class DashboardDataStore:
             "units": units,
             "last_error": last_error,
             "next_24h_precipitation_mm": next_24h,
+            "rainfall_windows": windows,
             "hourly_forecast": hourly,
         }
 
-    def get_ml_experimental_payload(self, grid_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        from ..ml import ExperimentalFloodInference
+    def get_weather_history_payload(self, limit: int = 50) -> Dict[str, Any]:
+        return {
+            "status": "AVAILABLE",
+            "history": self.weather_store.get_refresh_history(limit=limit),
+        }
 
-        inf = ExperimentalFloodInference()
+    def get_risk_forecast_payload(
+        self,
+        horizon_hours: int = 24,
+        grid_id: Optional[str] = None,
+        limit: int = 200,
+    ) -> Optional[Dict[str, Any]]:
+        from ..alerts import RISK_METHODOLOGY_DOC, evaluate_cell_risk_timeline, evaluate_forecast_risk_grid
+        cells = [
+            {
+                **f.get("properties", {}),
+                "latitude": f.get("properties", {}).get("centroid_lat"),
+                "longitude": f.get("properties", {}).get("centroid_lon"),
+            }
+            for f in self.cells_geojson.get("features", [])
+            if f.get("properties", {}).get("grid_id")
+        ]
+        zones = self.get_zone_forecasts_payload()
+        if grid_id is not None:
+            matched = [c for c in cells if c.get("grid_id") == grid_id]
+            if not matched:
+                return None
+            timeline = evaluate_cell_risk_timeline(matched[0], zones)
+            return {
+                "status": "AVAILABLE",
+                "grid_id": grid_id,
+                "is_calibrated_probability": False,
+                "methodology": RISK_METHODOLOGY_DOC,
+                "timeline": timeline,
+            }
+        return evaluate_forecast_risk_grid(cells, zones, horizon_hours=horizon_hours, limit=limit)
+
+    def get_ml_experimental_payload(self, grid_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if self._ml_inference is None:
+            from ..ml import ExperimentalFloodInference
+            self._ml_inference = ExperimentalFloodInference(
+                model_path=self.model_dir / "flood_risk_model_v8_exp.joblib",
+                metadata_path=self.model_dir / "model_metadata.json",
+            )
+        inf = self._ml_inference
         meta = inf.metadata or {}
         if grid_id is None:
             return {
                 "status": "AVAILABLE" if inf.model is not None else "UNAVAILABLE",
                 "model_name": meta.get("model_name"),
                 "model_version": meta.get("model_version"),
+                "data_version": meta.get("data_version"),
                 "qualification_status": meta.get("qualification_status", "UNAVAILABLE"),
                 "warning_gate": meta.get("warning_gate", "BLOCKED_EXPERIMENTAL_MODEL"),
                 "qualification_reason": meta.get("qualification_reason"),
@@ -780,7 +891,7 @@ class DashboardDataStore:
                 "feature_importances": meta.get("feature_importances"),
             }
 
-        # Cell-level experimental inference using static terrain + live/stale rain flag
+        # Cell-level experimental inference using cached static terrain + live/stale rain flag
         matched = [
             f["properties"] for f in self.cells_geojson.get("features", [])
             if f.get("properties", {}).get("grid_id") == grid_id
@@ -788,29 +899,13 @@ class DashboardDataStore:
         if not matched:
             return None
         p = matched[0]
-        # Join static hydrology features from phase6/phase7 if present
-        p6_h = Path("data/processed/phase6/hydrology/topographic_routing_static_features.parquet")
-        p7_h = Path("data/processed/phase7/hydrology/phase7_hydrology_comparison.parquet")
-        elev = p.get("elevation_mean_m")
-        slope = 1.5
-        upa = 1.0
-        twi = 12.0
-        dep = 0.0
-        sink = 0
-        if p6_h.is_file():
-            df_h = pd.read_parquet(p6_h)
-            r = df_h[df_h["grid_id"] == grid_id]
-            if not r.empty:
-                elev = float(r.iloc[0]["elevation_m"])
-                slope = float(r.iloc[0]["slope_deg"])
-                upa = float(r.iloc[0]["upstream_contributing_area_km2"])
-                twi = float(r.iloc[0]["topographic_wetness_index"])
-        if p7_h.is_file():
-            df_p7 = pd.read_parquet(p7_h)
-            r7 = df_p7[df_p7["grid_id"] == grid_id]
-            if not r7.empty:
-                dep = float(r7.iloc[0]["depression_depth_m"])
-                sink = int(r7.iloc[0]["is_closed_sink"])
+        hyd = self._hydro_lookup.get(str(grid_id), {})
+        elev = hyd.get("elevation_m", p.get("elevation_mean_m"))
+        slope = hyd.get("slope_deg", 1.5)
+        upa = hyd.get("upstream_contributing_area_km2", 1.0)
+        twi = hyd.get("topographic_wetness_index", 12.0)
+        dep = hyd.get("depression_depth_m", 0.0)
+        sink = hyd.get("is_closed_sink", 0)
 
         wf = self.get_weather_forecast_payload()
         fc24 = wf.get("next_24h_precipitation_mm") if wf.get("freshness") in ("LIVE", "RECENT") else None
@@ -978,6 +1073,8 @@ def load_dashboard_data(data_dir: Optional[Path] = None, reports_dir: Optional[P
 class DashboardRequestHandler(SimpleHTTPRequestHandler):
     """HTTP request handler serving dashboard REST endpoints and static assets."""
 
+    timeout = 30
+
     def __init__(self, *args, directory: Optional[str] = None, **kwargs):
         if directory is None:
             static_dir = Path(__file__).resolve().parent / "static"
@@ -986,6 +1083,13 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self):
+        try:
+            self._handle_get()
+        except Exception:
+            logger.exception("Unhandled error in GET %s", self.path)
+            self._send_error_json(500, "INTERNAL_SERVER_ERROR", "Internal server error", "An unexpected error occurred.")
+
+    def _handle_get(self):
         parsed = urlparse(self.path)
         clean_path = parsed.path
         params = parse_qs(parsed.query, keep_blank_values=True)
@@ -995,6 +1099,10 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
                 allowed_params = {"grid_id"}
             elif clean_path == "/api/alerts":
                 allowed_params = {"state", "grid_id", "limit"}
+            elif clean_path == "/api/weather/history":
+                allowed_params = {"limit"}
+            elif clean_path == "/api/risk/forecast":
+                allowed_params = {"horizon", "grid_id", "limit"}
             else:
                 allowed_params = set()
             unknown_params = set(params.keys()) - allowed_params
@@ -1106,6 +1214,52 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         elif clean_path == "/api/weather/forecast":
             self._send_json(self.datastore.get_weather_forecast_payload())
             return
+        elif clean_path == "/api/weather/history":
+            limit_val = 50
+            if "limit" in params:
+                try:
+                    limit_val = int(params["limit"][0])
+                    if limit_val < 1 or limit_val > 500:
+                        raise ValueError("out of range")
+                except ValueError:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid limit", "limit must be an integer between 1 and 500")
+                    return
+            self._send_json(self.datastore.get_weather_history_payload(limit=limit_val))
+            return
+        elif clean_path == "/api/risk/forecast":
+            from ..live import HORIZON_HOURS
+            horizon_val = 24
+            if "horizon" in params:
+                try:
+                    horizon_val = int(params["horizon"][0])
+                    if horizon_val not in HORIZON_HOURS:
+                        raise ValueError("unsupported horizon")
+                except ValueError:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid horizon", f"horizon must be one of {list(HORIZON_HOURS)}")
+                    return
+            grid_param = params.get("grid_id", [None])[0]
+            if grid_param is not None:
+                grid_param = grid_param.strip()
+                if not grid_param:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid query parameter", "grid_id cannot be empty")
+                    return
+                res = self.datastore.get_risk_forecast_payload(horizon_hours=horizon_val, grid_id=grid_param)
+                if res is None:
+                    self._send_error_json(404, "CELL_NOT_FOUND", "Grid cell not found", f"No cell found for grid_id='{grid_param}'")
+                    return
+                self._send_json(res)
+                return
+            limit_val = 200
+            if "limit" in params:
+                try:
+                    limit_val = int(params["limit"][0])
+                    if limit_val < 1 or limit_val > 1170:
+                        raise ValueError("out of range")
+                except ValueError:
+                    self._send_error_json(400, "INVALID_PARAMETER", "Invalid limit", "limit must be an integer between 1 and 1170")
+                    return
+            self._send_json(self.datastore.get_risk_forecast_payload(horizon_hours=horizon_val, limit=limit_val))
+            return
         elif clean_path == "/api/ml/experimental":
             if "grid_id" in params:
                 target_id = params["grid_id"][0].strip()
@@ -1174,6 +1328,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             if index_path.is_file():
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self._send_security_headers(is_api=False)
                 with open(index_path, "rb") as f:
                     content = f.read()
                 self.send_header("Content-Length", str(len(content)))
@@ -1195,6 +1350,17 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             f"HTTP {method} is not supported on '{self.path.split('?')[0]}'; use GET.",
         )
 
+    def _drain_request_body(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except ValueError:
+            return
+        if 0 < length <= 65536:
+            try:
+                self.rfile.read(length)
+            except Exception:
+                pass
+
     def _check_admin_auth(self) -> bool:
         expected = self.datastore.admin_token
         if not expected:
@@ -1207,15 +1373,25 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         elif x_hdr:
             token = x_hdr.strip()
         if not token:
+            self._drain_request_body()
+            logger.warning("Unauthorized POST attempt to %s (missing token)", self.path.split("?")[0])
             self._send_error_json(401, "UNAUTHORIZED", "Authentication required", "Provide Bearer or X-Admin-Token header.")
             return False
-        if token != expected:
+        if not hmac.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
+            self._drain_request_body()
+            logger.warning("Forbidden POST attempt to %s (invalid token)", self.path.split("?")[0])
             self._send_error_json(403, "FORBIDDEN", "Invalid credentials", "Provided admin token is invalid.")
             return False
         return True
 
     def _read_json_body(self) -> Dict[str, Any]:
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        raw_len = self.headers.get("Content-Length", "0") or "0"
+        try:
+            length = int(raw_len)
+        except ValueError as e:
+            raise ValueError("INVALID_CONTENT_LENGTH") from e
+        if length < 0:
+            raise ValueError("INVALID_CONTENT_LENGTH")
         if length > 65536:
             raise ValueError("PAYLOAD_TOO_LARGE")
         if length <= 0:
@@ -1229,6 +1405,13 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         return data
 
     def do_POST(self):
+        try:
+            self._handle_post()
+        except Exception:
+            logger.exception("Unhandled error in POST %s", self.path)
+            self._send_error_json(500, "INTERNAL_SERVER_ERROR", "Internal server error", "An unexpected error occurred.")
+
+    def _handle_post(self):
         from ..alerts import AlertNotFoundError, InvalidLifecycleTransitionError
         clean_path = urlparse(self.path).path
         parts = [p for p in clean_path.split("/") if p]
@@ -1313,11 +1496,32 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
     def do_PATCH(self):
         self._method_not_allowed("PATCH")
 
+    def _cors_origin(self) -> str:
+        req_origin = self.headers.get("Origin", "")
+        allowed = getattr(self.datastore, "allowed_origin", "http://127.0.0.1:8501")
+        if allowed == "*":
+            return "*"
+        if req_origin and (
+            req_origin == allowed
+            or req_origin.startswith("http://127.0.0.1:")
+            or req_origin.startswith("http://localhost:")
+        ):
+            return req_origin
+        return allowed
+
+    def _send_security_headers(self, is_api: bool = True) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        if is_api:
+            self.send_header("Cache-Control", "no-store")
+
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-Token")
+        self._send_security_headers(is_api=True)
         self.end_headers()
 
     def _send_json(self, data: Any, status: int = 200):
@@ -1325,10 +1529,12 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", self._cors_origin())
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self._send_security_headers(is_api=True)
         self.end_headers()
         self.wfile.write(body)
+        self.wfile.flush()
 
     def log_message(self, format, *args):
         # Quiet standard HTTP access logs to keep terminal output clean
@@ -1338,6 +1544,7 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+    request_queue_size = 64
 
 
 def run_dashboard(
@@ -1369,7 +1576,15 @@ def run_dashboard(
     HTTPServer
         The active HTTP server instance.
     """
+    configure_logging()
     ds = load_dashboard_data(data_dir=data_dir, reports_dir=reports_dir)
+    is_loopback = host in ("127.0.0.1", "localhost", "::1")
+    if not is_loopback and not ds.admin_token and os.environ.get("FLOODRISK_ALLOW_UNAUTH_NONLOOPBACK") != "1":
+        raise RuntimeError(
+            "FLOODRISK_ADMIN_TOKEN must be configured when binding to a non-loopback host "
+            f"('{host}'). Set FLOODRISK_ADMIN_TOKEN or bind to 127.0.0.1."
+        )
+
     do_refresh = blocking if enable_live_refresh is None else enable_live_refresh
     if do_refresh:
         ds.refresher.start(run_initial=True)
@@ -1379,17 +1594,29 @@ def run_dashboard(
         return DashboardRequestHandler(*args, directory=static_dir, **kwargs)
 
     server = ThreadedHTTPServer((host, port), handler_factory)
+    logger.info("Dashboard server listening on http://%s:%s/ (refresh=%s)", host, port, do_refresh)
     print(f"[Dashboard Server] Operational console running at http://{host}:{port}/")
     print(f"[Dashboard Server] Serving endpoints: /api/summary, /api/cells, /api/incidents, /api/episodes, /api/manifest")
 
+    def _graceful_shutdown(signum=None, frame=None):
+        logger.info("Shutting down dashboard server (signal=%s)...", signum)
+        ds.refresher.stop()
+        try:
+            server.shutdown()
+        except Exception:
+            pass
+        server.server_close()
+        ds.weather_store.close()
+        ds.alert_store.close()
+
     if blocking:
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGTERM, _graceful_shutdown)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             print("\n[Dashboard Server] Shutting down...")
-            ds.refresher.stop()
-            server.shutdown()
-            server.server_close()
+            _graceful_shutdown("SIGINT")
     else:
         t = threading.Thread(target=server.serve_forever, daemon=True)
         t.start()

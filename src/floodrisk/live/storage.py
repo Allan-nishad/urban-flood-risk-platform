@@ -7,8 +7,30 @@ import threading
 from typing import Any, Dict, List, Optional
 
 
+def cleanup_old_backups(backup_dir: Path | str, keep: int = 10) -> int:
+    """Retain the most recent `keep` SQLite backup files and remove older ones."""
+    bdir = Path(backup_dir)
+    if not bdir.is_dir() or keep < 1:
+        return 0
+    files = sorted(
+        (p for p in bdir.glob("floodrisk_v8_*.db") if p.is_file()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    removed = 0
+    for old_file in files[keep:]:
+        try:
+            old_file.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 class LiveWeatherStore:
-    """Thread-safe SQLite store for meteorological records and provider health."""
+    """Thread-safe SQLite store for meteorological records, refresh history, and provider health."""
+
+    SCHEMA_VERSION = 2
 
     def __init__(self, db_path: Path | str = Path("data/state/floodrisk_v8.db")):
         self.db_path = Path(db_path)
@@ -71,6 +93,27 @@ class LiveWeatherStore:
                 )
                 """
             )
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS forecast_refresh_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider TEXT NOT NULL,
+                    model_id TEXT NOT NULL,
+                    attempt_utc TEXT NOT NULL,
+                    issue_time_utc TEXT,
+                    success INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    zones_fetched INTEGER NOT NULL DEFAULT 0,
+                    records_written INTEGER NOT NULL DEFAULT 0,
+                    duration_ms INTEGER NOT NULL DEFAULT 0,
+                    error TEXT
+                )
+                """
+            )
+            self._conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_refresh_hist_time ON forecast_refresh_history (attempt_utc DESC)"
+            )
+            self._conn.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
 
     def upsert_weather_records(self, records: List[Dict[str, Any]], freshness_status: str = "LIVE") -> int:
         if not records:
@@ -211,7 +254,7 @@ class LiveWeatherStore:
             grouped.setdefault(d["location_ref"], []).append(d)
         return grouped
 
-    def backup_database(self, backup_path: Path | str) -> str:
+    def backup_database(self, backup_path: Path | str, retention_keep: int = 10) -> str:
         """Create a consistent online SQLite backup using sqlite3.Connection.backup()."""
         dest = Path(backup_path)
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -221,13 +264,64 @@ class LiveWeatherStore:
                 self._conn.backup(dest_conn)
             finally:
                 dest_conn.close()
+        cleanup_old_backups(dest.parent, keep=retention_keep)
         return str(dest).replace("\\", "/")
+
+    def record_refresh_history(
+        self,
+        provider: str,
+        model_id: str,
+        attempt_utc: str,
+        success: bool,
+        status: str,
+        issue_time_utc: Optional[str] = None,
+        zones_fetched: int = 0,
+        records_written: int = 0,
+        duration_ms: int = 0,
+        error: Optional[str] = None,
+    ) -> None:
+        with self._lock, self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO forecast_refresh_history (
+                    provider, model_id, attempt_utc, issue_time_utc, success,
+                    status, zones_fetched, records_written, duration_ms, error
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    provider,
+                    model_id,
+                    attempt_utc,
+                    issue_time_utc,
+                    1 if success else 0,
+                    status,
+                    int(zones_fetched),
+                    int(records_written),
+                    int(duration_ms),
+                    error,
+                ),
+            )
+
+    def get_refresh_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM forecast_refresh_history ORDER BY id DESC LIMIT ?",
+                (int(limit),),
+            ).fetchall()
+        return [{**dict(r), "success": bool(r["success"])} for r in rows]
 
     def check_db_health(self) -> Dict[str, Any]:
         with self._lock:
             jm = self._conn.execute("PRAGMA journal_mode").fetchone()[0]
+            uv = self._conn.execute("PRAGMA user_version").fetchone()[0]
             cnt = self._conn.execute("SELECT COUNT(*) AS cnt FROM weather_records").fetchone()["cnt"]
-        return {"status": "HEALTHY", "db_path": str(self.db_path).replace("\\", "/"), "journal_mode": jm, "weather_records": int(cnt)}
+        return {
+            "status": "HEALTHY",
+            "db_path": str(self.db_path).replace("\\", "/"),
+            "journal_mode": jm,
+            "schema_version": int(uv),
+            "weather_records": int(cnt),
+        }
 
     def count_records(self) -> int:
         with self._lock:

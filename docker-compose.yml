@@ -1,0 +1,26 @@
+services:
+  floodrisk-dashboard:
+    build: .
+    container_name: urban-flood-risk-dashboard
+    ports:
+      - "127.0.0.1:8501:8501"
+    env_file:
+      - .env
+    environment:
+      FLOODRISK_DB_PATH: /app/data/state/floodrisk_v8.db
+      FLOODRISK_BACKUP_DIR: /app/data/state/backups
+      FLOODRISK_MODEL_DIR: /app/models/v8_experimental
+      FLOODRISK_REFRESH_INTERVAL_S: "${FLOODRISK_REFRESH_INTERVAL_S:-1800}"
+      FLOODRISK_ALLOWED_ORIGIN: "${FLOODRISK_ALLOWED_ORIGIN:-http://127.0.0.1:8501}"
+    volumes:
+      - floodrisk_state:/app/data/state
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; r = urllib.request.urlopen('http://127.0.0.1:8501/api/ready', timeout=4); sys.exit(0 if r.status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  floodrisk_state:
