@@ -4,235 +4,359 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bengaluru Urban Flood Risk Intelligence Platform</title>
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <style>
     :root {
-      --bg-primary: #f8fafc;
-      --bg-surface: #ffffff;
-      --bg-surface-secondary: #f1f5f9;
-      --border-color: #e2e8f0;
-      --text-main: #0f172a;
+      --bg-primary: #0a0f1a;
+      --bg-surface: #111827;
+      --bg-surface-secondary: #1e2538;
+      --bg-surface-tertiary: #0d1521;
+      --border-color: #1f2d45;
+      --border-subtle: #162032;
+      --text-main: #e2e8f0;
       --text-muted: #64748b;
+      --text-dim: #3d4f68;
       --text-inverse: #ffffff;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --accent-danger: #dc2626;
-      --accent-warning: #d97706;
-      --accent-success: #16a34a;
-      --accent-purple: #7c3aed;
-      --accent-cyan: #0284c7;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-glow: rgba(59,130,246,0.15);
+      --accent-danger: #ef4444;
+      --accent-danger-dim: rgba(239,68,68,0.12);
+      --accent-warning: #f59e0b;
+      --accent-warning-dim: rgba(245,158,11,0.12);
+      --accent-success: #10b981;
+      --accent-success-dim: rgba(16,185,129,0.12);
+      --accent-purple: #8b5cf6;
+      --accent-purple-dim: rgba(139,92,246,0.12);
+      --accent-cyan: #06b6d4;
+      --accent-cyan-dim: rgba(6,182,212,0.12);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      --radius: 6px;
+      --radius-sm: 4px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: var(--text-main);
       background-color: var(--bg-primary);
       line-height: 1.5;
-      font-size: 14px;
+      font-size: 13px;
       overflow-x: hidden;
     }
 
+    /* ─── Skeleton Loader ─── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-surface-secondary) 25%, #263347 50%, var(--bg-surface-secondary) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 3px;
+      display: inline-block;
+      min-width: 60px;
+      height: 1em;
+      vertical-align: middle;
+    }
+    @keyframes shimmer { 0% {background-position:200% 0} 100% {background-position:-200% 0} }
+
+    /* ─── Live Pulse ─── */
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent-success);
+      display: inline-block;
+      box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+      animation: pulse-ring 2s ease-out infinite;
+    }
+    .pulse-dot.warn { background: var(--accent-warning); box-shadow: 0 0 0 0 rgba(245,158,11,0.6); animation: pulse-ring-warn 2s ease-out infinite; }
+    .pulse-dot.danger { background: var(--accent-danger); box-shadow: 0 0 0 0 rgba(239,68,68,0.6); animation: pulse-ring-danger 2s ease-out infinite; }
+    .pulse-dot.stale { background: var(--text-dim); box-shadow: none; animation: none; }
+    @keyframes pulse-ring { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.6)} 70%{box-shadow:0 0 0 7px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
+    @keyframes pulse-ring-warn { 0%{box-shadow:0 0 0 0 rgba(245,158,11,0.6)} 70%{box-shadow:0 0 0 7px rgba(245,158,11,0)} 100%{box-shadow:0 0 0 0 rgba(245,158,11,0)} }
+    @keyframes pulse-ring-danger { 0%{box-shadow:0 0 0 0 rgba(239,68,68,0.6)} 70%{box-shadow:0 0 0 7px rgba(239,68,68,0)} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} }
+
+    /* ─── Global Fade-in ─── */
+    @keyframes fadeInUp { from {opacity:0;transform:translateY(8px)} to {opacity:1;transform:none} }
+    .fade-in { animation: fadeInUp 0.3s ease both; }
+
+    /* ─── Header ─── */
     header {
-      background-color: #0f172a;
-      color: #f8fafc;
-      padding: 12px 24px;
-      border-bottom: 2px solid #1e293b;
+      background: linear-gradient(135deg, #060c18 0%, #0d1a30 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
+      height: 56px;
+      flex-wrap: nowrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
+
+    .brand-block { display: flex; flex-direction: column; gap: 2px; }
 
     .brand-title {
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: -0.01em;
+      color: #f1f5f9;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      white-space: nowrap;
     }
 
-    .brand-tag {
-      background: #3b82f6;
-      color: #ffffff;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-weight: 600;
+    .brand-chip {
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
 
     .brand-subtitle {
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 2px;
+      font-size: 11px;
+      color: #475569;
+      font-family: var(--font-mono);
+      white-space: nowrap;
     }
 
-    .badge-bar {
+    .header-status {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
     }
 
-    .badge {
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 4px 12px 4px 8px;
       font-size: 11px;
       font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 4px;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .chip {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 3px;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
+      letter-spacing: 0.03em;
     }
-    .badge-warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .badge-info { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
-    .badge-purple { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
-    .badge-success { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .chip-warning { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .chip-info    { background: rgba(59,130,246,0.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+    .chip-purple  { background: rgba(139,92,246,0.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+    .chip-success { background: rgba(16,185,129,0.15);  color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .chip-muted   { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+    .chip-danger  { background: rgba(239,68,68,0.15);   color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
 
-    .alert-banner {
-      background-color: #fffbeb;
-      border-left: 4px solid var(--accent-warning);
-      border-bottom: 1px solid #fef3c7;
-      padding: 10px 24px;
-      font-size: 13px;
+    /* ─── Research Disclaimer Bar ─── */
+    .disclaimer-bar {
+      background: rgba(245,158,11,0.08);
+      border-bottom: 1px solid rgba(245,158,11,0.18);
+      padding: 7px 24px;
+      font-size: 11px;
       color: #92400e;
+      color: #d97706;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
+      flex-wrap: wrap;
     }
-    .alert-banner strong { font-weight: 700; }
-    .alert-stats { display: flex; gap: 16px; font-weight: 600; }
+    .disclaimer-bar .label { font-weight: 700; color: #fbbf24; }
+    .disclaimer-stats { display: flex; gap: 20px; font-weight: 600; font-family: var(--font-mono); font-size: 11px; }
 
+    /* ─── Error Banner ─── */
+    #apiErrorBanner {
+      display: none;
+      background: rgba(239,68,68,0.1);
+      border-bottom: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      padding: 8px 24px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ─── Live Weather Status Bar ─── */
+    .live-status-bar {
+      background: var(--bg-surface-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .live-block { display: flex; flex-direction: column; gap: 4px; }
+
+    .live-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .live-value {
+      font-size: 12px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .live-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── KPI Row ─── */
     .kpi-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      padding: 16px 24px 8px 24px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      padding: 14px 24px 10px 24px;
     }
 
     .kpi-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: var(--radius);
       padding: 12px 16px;
-      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
     }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--kpi-accent, var(--primary));
+    }
+    .kpi-card:hover { border-color: #2a3f5f; }
 
     .kpi-title {
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.05em;
       color: var(--text-muted);
-      letter-spacing: 0.04em;
     }
 
     .kpi-value {
-      font-size: 20px;
-      font-weight: 700;
+      font-size: 22px;
+      font-weight: 800;
       color: var(--text-main);
-      margin: 4px 0 2px 0;
+      margin: 6px 0 2px 0;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s;
     }
 
     .kpi-note {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
+      font-family: var(--font-mono);
     }
 
+    /* ─── Console Layout ─── */
     .console-layout {
       display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 16px;
-      padding: 8px 24px 16px 24px;
-      min-height: 640px;
+      grid-template-columns: 1fr 370px;
+      gap: 14px;
+      padding: 10px 24px 14px 24px;
+      min-height: 620px;
     }
+    @media (max-width: 1080px) { .console-layout { grid-template-columns: 1fr; } }
 
-    @media (max-width: 1080px) {
-      .console-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
+    /* ─── Map Container ─── */
     .map-container {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: var(--radius);
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: var(--shadow-sm);
     }
 
     .map-controls-bar {
-      padding: 10px 16px;
+      padding: 8px 14px;
       background: var(--bg-surface-secondary);
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .layer-selector {
       display: flex;
-      gap: 4px;
-      background: #e2e8f0;
+      gap: 3px;
+      background: rgba(0,0,0,0.3);
       padding: 3px;
-      border-radius: 6px;
+      border-radius: 5px;
     }
 
     .layer-btn {
       background: none;
       border: none;
-      padding: 6px 12px;
+      padding: 5px 11px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       cursor: pointer;
       color: var(--text-muted);
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
-
-    .layer-btn:hover {
-      color: var(--text-main);
-    }
-
+    .layer-btn:hover { color: var(--text-main); }
     .layer-btn.active {
-      background: var(--bg-surface);
-      color: var(--primary);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 1px 4px rgba(59,130,246,0.4);
     }
 
-    #map {
-      height: 560px;
-      width: 100%;
-      background: #e5e7eb;
-    }
+    #map { height: 548px; width: 100%; background: #0d1521; }
 
+    /* ─── Side Panel ─── */
     .side-panel {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border-radius: var(--radius);
       display: flex;
       flex-direction: column;
-      box-shadow: var(--shadow-sm);
-      height: 620px;
+      height: 610px;
       overflow: hidden;
     }
 
     .panel-header {
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
@@ -241,16 +365,17 @@
     }
 
     .panel-title {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--text-main);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .panel-tabs {
       display: flex;
-      gap: 4px;
+      gap: 0;
       border-bottom: 1px solid var(--border-color);
-      padding: 0 12px;
       background: var(--bg-surface);
     }
 
@@ -258,43 +383,39 @@
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
-      padding: 10px 12px;
-      font-size: 12px;
+      padding: 9px 13px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
     }
+    .tab-btn:hover { color: var(--text-main); }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
+    .panel-body { padding: 14px; overflow-y: auto; flex: 1; }
 
-    .panel-body {
-      padding: 16px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
+    /* ─── Inspector ─── */
     .cell-id-badge {
       font-family: var(--font-mono);
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
-      color: #1e293b;
-      background: #f1f5f9;
-      padding: 6px 10px;
+      color: #93c5fd;
+      background: rgba(59,130,246,0.1);
+      padding: 5px 10px;
       border-radius: 4px;
       display: inline-block;
       margin-bottom: 8px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid rgba(59,130,246,0.2);
     }
 
     .score-banner {
-      background: #f8fafc;
+      background: var(--bg-surface-secondary);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 14px;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 12px;
     }
 
     .score-row {
@@ -304,288 +425,459 @@
       margin-bottom: 6px;
     }
 
-    .score-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
+    .score-label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
 
     .score-val {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       color: var(--primary);
       font-family: var(--font-mono);
     }
 
     .progress-bar-bg {
-      height: 8px;
-      background: #e2e8f0;
-      border-radius: 4px;
+      height: 5px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
       overflow: hidden;
       margin-bottom: 4px;
     }
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
-      border-radius: 4px;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 55%, #ef4444 100%);
+      border-radius: 3px;
       width: 0%;
-      transition: width 0.3s ease;
+      transition: width 0.5s ease;
     }
 
     .section-title {
-      font-size: 12px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin: 14px 0 8px 0;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      margin: 12px 0 6px 0;
       padding-bottom: 4px;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
-    .meta-table {
-      width: 100%;
-      font-size: 12px;
-      border-collapse: collapse;
-      margin-bottom: 8px;
-    }
+    .meta-table { width: 100%; font-size: 11px; border-collapse: collapse; margin-bottom: 6px; }
+    .meta-table td { padding: 3px 0; border-bottom: 1px solid var(--border-subtle); }
+    .meta-table td:first-child { color: var(--text-muted); width: 55%; }
+    .meta-table td:last-child { text-align: right; font-weight: 600; font-family: var(--font-mono); color: var(--text-main); }
 
-    .meta-table td {
-      padding: 4px 0;
-      border-bottom: 1px solid #f8fafc;
-    }
-
-    .meta-table td:first-child {
-      color: var(--text-muted);
-      width: 55%;
-    }
-
-    .meta-table td:last-child {
-      text-align: right;
-      font-weight: 600;
-      font-family: var(--font-mono);
-    }
-
+    /* ─── Map Legend ─── */
     .map-legend {
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(13,21,33,0.95);
       padding: 10px 14px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      border: 1px solid #cbd5e1;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
       font-size: 11px;
       line-height: 1.4;
-      max-width: 250px;
+      max-width: 230px;
+      backdrop-filter: blur(8px);
     }
+    .legend-title { font-weight: 700; margin-bottom: 6px; color: #cbd5e1; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; color: #94a3b8; }
+    .legend-color { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
 
-    .legend-title {
-      font-weight: 700;
-      margin-bottom: 6px;
-      color: #0f172a;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.04em;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .legend-color {
-      width: 14px;
-      height: 14px;
-      border-radius: 2px;
-      border: 1px solid rgba(0,0,0,0.2);
-    }
-
-    .bottom-section {
-      padding: 8px 24px 24px 24px;
-    }
+    /* ─── Bottom Section ─── */
+    .bottom-section { padding: 6px 24px 24px 24px; }
 
     .tab-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
-      border-radius: 6px;
-      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius);
       overflow: hidden;
     }
 
-    .data-table-container {
-      max-height: 280px;
-      overflow-y: auto;
+    .bottom-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-surface-secondary);
+      overflow-x: auto;
     }
+
+    .bottom-tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .bottom-tab-btn:hover { color: var(--text-main); }
+    .bottom-tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: rgba(59,130,246,0.04); }
+
+    .tab-count-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    /* ─── Data Tables ─── */
+    .data-table-container { max-height: 320px; overflow-y: auto; }
 
     .data-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 11px;
       text-align: left;
     }
-
     .data-table th {
       background: var(--bg-surface-secondary);
-      padding: 8px 12px;
-      font-weight: 600;
+      padding: 7px 12px;
+      font-weight: 700;
       color: var(--text-muted);
       border-bottom: 1px solid var(--border-color);
       position: sticky;
       top: 0;
       z-index: 1;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.04em;
     }
-
     .data-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border-color);
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
     }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
 
-    .data-table tr:hover {
-      background: #f8fafc;
-    }
-
-    .disclaimer-box {
-      background: #eff6ff;
-      border-left: 4px solid var(--primary);
+    /* ─── Info Banner ─── */
+    .info-banner {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
       padding: 12px 16px;
-      margin: 16px;
-      border-radius: 0 4px 4px 0;
-      font-size: 12px;
-      color: #1e40af;
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      border-left: 3px solid;
     }
+    .info-banner.research {
+      background: rgba(59,130,246,0.07);
+      border-color: var(--primary);
+      color: #93c5fd;
+    }
+    .info-banner.caution {
+      background: rgba(245,158,11,0.07);
+      border-color: var(--accent-warning);
+      color: #fcd34d;
+    }
+    .info-banner.synthetic {
+      background: rgba(139,92,246,0.07);
+      border-color: var(--accent-purple);
+      color: #c4b5fd;
+    }
+    .info-banner-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .info-banner-body { font-size: 11px; line-height: 1.6; }
+    .info-banner-title { font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; margin-bottom: 3px; }
+
+    /* ─── Alert Controls Bar ─── */
+    .alert-controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-size: 11px;
+    }
+
+    .alert-stat-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+
+    .stat-item { display: flex; flex-direction: column; }
+    .stat-item .stat-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    .stat-item .stat-value { font-size: 13px; font-weight: 700; color: var(--text-main); font-family: var(--font-mono); }
+
+    .action-btn {
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .action-btn:hover { background: var(--primary-hover); }
+
+    .action-btn-sm {
+      padding: 3px 9px;
+      font-size: 10px;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      cursor: pointer;
+      background: var(--bg-surface-secondary);
+      color: var(--text-muted);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .action-btn-sm:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ─── Severity Strips ─── */
+    .sev-strip { display: inline-block; width: 3px; height: 1.1em; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+    .sev-critical { background: #ef4444; }
+    .sev-high     { background: #f59e0b; }
+    .sev-moderate { background: #3b82f6; }
+    .sev-low      { background: #10b981; }
+
+    /* ─── State Badges ─── */
+    .state-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .state-active      { background: rgba(239,68,68,0.15);   color: #f87171; }
+    .state-ack         { background: rgba(245,158,11,0.15);  color: #fcd34d; }
+    .state-resolved    { background: rgba(16,185,129,0.15);  color: #34d399; }
+    .state-expired     { background: rgba(100,116,139,0.12); color: #64748b; }
+    .state-watch       { background: rgba(245,158,11,0.15);  color: #fcd34d; }
+    .state-closed      { background: rgba(100,116,139,0.12); color: #64748b; }
+    .state-valid       { background: rgba(16,185,129,0.12);  color: #34d399; }
+    .state-blocked     { background: rgba(239,68,68,0.12);   color: #f87171; }
+
+    /* ─── Gate Cards ─── */
+    .gate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-bottom: 20px; }
+
+    .gate-card {
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .gate-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .gate-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-main); }
+    .gate-card-body { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+    .gate-card-body strong { color: var(--text-main); }
+
+    /* ─── Stage Cards (Phase 6) ─── */
+    .stage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 18px; }
+
+    .stage-card {
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 12px;
+      border-top: 2px solid;
+      transition: transform 0.15s;
+    }
+    .stage-card:hover { transform: translateY(-1px); }
+    .stage-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 4px; }
+    .stage-card-value { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+    .stage-card-desc { font-size: 10px; color: var(--text-muted); line-height: 1.4; }
+
+    /* ─── Track Labels ─── */
+    .track-label {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+      margin-right: 6px;
+    }
+
+    /* ─── Section Headings ─── */
+    .section-heading {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 16px 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── Disclaimer Footer ─── */
+    .footer-disclaimer {
+      background: var(--bg-surface-tertiary);
+      border-top: 1px solid var(--border-subtle);
+      padding: 12px 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a3f5f; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+    /* ─── Tab content padding ─── */
+    .tab-content-padded { padding: 16px; }
   </style>
 </head>
 <body>
 
-  <!-- Top Header -->
+  <!-- ===== HEADER ===== -->
   <header>
-    <div>
+    <div class="brand-block">
       <div class="brand-title">
-        <span>Bengaluru Urban Flood Risk Intelligence Platform</span>
-        <span class="brand-tag">v4.7 Verified</span>
+        Bengaluru Urban Flood Risk Intelligence
+        <span class="brand-chip">v8 Research</span>
       </div>
-      <div class="brand-subtitle">
-        Static Susceptibility (SRTM & WorldCover) • NWP Regional Surveillance (ECMWF/GFS 9-Anchor) • Dynamic Prioritization
-      </div>
+      <div class="brand-subtitle">ECMWF/GFS NWP &bull; SRTM/WorldCover MCDA &bull; Stage 3 Experimental ML &bull; Internal Research Use Only</div>
     </div>
-    <div class="badge-bar">
-      <span class="badge badge-warning" title="Authoritative municipal boundary pending">Boundary: Provisional BBox (77.45°-77.75°E)</span>
-      <span class="badge badge-info" title="9 regional anchors, coarse ~9-13 km model resolution">NWP Grid: 9 Regional Anchors (~9-13km)</span>
-      <span class="badge badge-purple" title="Synthetic fixtures quarantined from operational map">SAR: Quarantined</span>
-      <span class="badge badge-success" id="manifestBadge">Manifest: 100% SHA-256</span>
+    <div class="header-status">
+      <div class="status-pill">
+        <span class="pulse-dot" id="headerPulseDot"></span>
+        <span id="headerStatusText">Connecting...</span>
+      </div>
+      <div class="chip-row">
+        <span class="chip chip-warning" title="Authoritative municipal boundary pending">BBox: Provisional</span>
+        <span class="chip chip-info">9 NWP Anchors</span>
+        <span class="chip chip-purple">SAR: Quarantined</span>
+        <span class="chip chip-success" id="manifestBadge">Manifest: SHA-256</span>
+      </div>
     </div>
   </header>
 
-  <!-- Alert Banner -->
-  <div class="alert-banner" id="alertBanner">
+  <!-- ===== RESEARCH DISCLAIMER BAR ===== -->
+  <div class="disclaimer-bar">
     <div>
-      <strong>NWP PRECIPITATION SURVEILLANCE:</strong>
+      <span class="label">NWP PRECIPITATION SURVEILLANCE —</span>
       <span id="alertSummary">Loading NWP precipitation summary...</span>
-      <div style="font-size:11px; color:#78350f; margin-top:2px;">
-        * Internal meteorological rainfall classifications based on rolling 24h depth; NOT official IMD/KSNDMC government emergency warnings.
+      <div style="font-size:10px; color:#78350f; margin-top:2px; color:#92400e;">
+        Internal meteorological classifications based on rolling 24h forecast depth. NOT official IMD/KSNDMC government emergency warnings.
       </div>
     </div>
-    <div class="alert-stats">
-      <span id="alertStatsHeavy" style="color:#b91c1c;">● -- Heavy Rain Category</span>
-      <span id="alertStatsMod" style="color:#d97706;">● -- Moderate Rain Category</span>
-      <span id="alertStatsLight" style="color:#15803d;">● -- Light Rain Category</span>
+    <div class="disclaimer-stats">
+      <span id="alertStatsHeavy" style="color:#f87171;">-- Heavy</span>
+      <span id="alertStatsMod" style="color:#fcd34d;">-- Moderate</span>
+      <span id="alertStatsLight" style="color:#34d399;">-- Light</span>
     </div>
   </div>
-  <div id="apiErrorBanner" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; color:#991b1b; padding:10px 18px; font-size:12px; font-weight:600;"></div>
 
-  <!-- Operational Live Weather Data Status Strip (V8 Stage 1) -->
-  <section id="liveWeatherStatusBar" style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; font-size:11px;">
-    <div>
-      <strong style="color:#0f172a;">LIVE FORECAST ADAPTER:</strong>
-      <span id="liveFcstProvider">Loading...</span> | Model: <code id="liveFcstModel">--</code>
-      <div style="color:#64748b; margin-top:2px;">Freshness: <span id="liveFcstFreshness" class="badge badge-info">--</span> | Updated: <span id="liveFcstUpdated">--</span></div>
+  <div id="apiErrorBanner"></div>
+
+  <!-- ===== LIVE WEATHER STATUS BAR ===== -->
+  <section class="live-status-bar">
+    <div class="live-block">
+      <div class="live-label">Live Forecast Adapter</div>
+      <div class="live-value" id="liveFcstProvider"><span class="skeleton" style="width:120px"></span></div>
+      <div class="live-sub">
+        Model: <span id="liveFcstModel" class="chip chip-info" style="font-family:var(--font-mono);">--</span>
+        &nbsp;Freshness: <span id="liveFcstFreshness" class="chip chip-muted">--</span>
+      </div>
     </div>
-    <div>
-      <strong style="color:#0f172a;">FORECAST RAINFALL &amp; VALIDITY:</strong>
-      <span id="liveFcstNext24h">--</span>
-      <div style="color:#64748b; margin-top:2px;">Window: <span id="liveFcstWindow">--</span></div>
+    <div class="live-block">
+      <div class="live-label">Last Refresh &amp; Window</div>
+      <div class="live-value" id="liveFcstUpdated"><span class="skeleton" style="width:160px"></span></div>
+      <div class="live-sub">Window: <span id="liveFcstWindow">--</span></div>
     </div>
-    <div>
-      <strong style="color:#0f172a;">LIVE OBSERVED RAINFALL:</strong>
-      <span id="liveObsStatus" class="badge badge-warning">--</span>
-      <div id="liveObsDetail" style="color:#64748b; margin-top:2px;">Checking live observation feeds...</div>
+    <div class="live-block">
+      <div class="live-label">Forecast Rainfall (Next 24h)</div>
+      <div class="live-value" id="liveFcstNext24h"><span class="skeleton" style="width:80px"></span></div>
+      <div class="live-sub">
+        Observed: <span id="liveObsStatus" class="chip chip-warning">--</span>
+        <span id="liveObsDetail"></span>
+      </div>
     </div>
-    <div>
-      <strong style="color:#0f172a;">SOURCE HEALTH &amp; LAST ERROR:</strong>
-      <span id="liveSourceHealth">--</span>
-      <div id="liveLastError" style="color:#64748b; margin-top:2px;">None</div>
+    <div class="live-block">
+      <div class="live-label">Source Health &amp; Last Error</div>
+      <div class="live-value" id="liveSourceHealth"><span class="skeleton" style="width:100px"></span></div>
+      <div class="live-sub" id="liveLastError" style="color:#64748b;">No errors</div>
     </div>
   </section>
 
-  <!-- KPI Row -->
+  <!-- ===== KPI ROW ===== -->
   <section class="kpi-row">
-    <div class="kpi-card">
+    <div class="kpi-card" style="--kpi-accent:#3b82f6;">
       <div class="kpi-title">Domain Scope</div>
-      <div class="kpi-value" id="kpiTotalCells">--</div>
+      <div class="kpi-value" id="kpiTotalCells"><span class="skeleton" style="width:60px;height:22px;"></span></div>
       <div class="kpi-note">Equal-Area Cells (EPSG:6933)</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="--kpi-accent:#ef4444;">
       <div class="kpi-title">Heavy Rain Category</div>
-      <div class="kpi-value" id="kpiHeavyRain" style="color:#b91c1c;">--</div>
-      <div class="kpi-note">Internal Threshold (≥ 64.5 mm / 24h)</div>
+      <div class="kpi-value" id="kpiHeavyRain" style="color:#f87171;"><span class="skeleton" style="width:60px;height:22px;"></span></div>
+      <div class="kpi-note">Threshold: &ge; 64.5 mm / 24h</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-title">Max 24h Rain Exposure</div>
-      <div class="kpi-value" id="kpiMax24h">--</div>
+    <div class="kpi-card" style="--kpi-accent:#f59e0b;">
+      <div class="kpi-title">Peak 24h Rain Exposure</div>
+      <div class="kpi-value" id="kpiMax24h"><span class="skeleton" style="width:80px;height:22px;"></span></div>
       <div class="kpi-note" id="kpiMax24hNote">NWP Forecast Exposure</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="--kpi-accent:#f59e0b;">
       <div class="kpi-title">High Priority Cells (&gt;0.55)</div>
-      <div class="kpi-value" id="kpiHighPriority" style="color:#d97706;">--</div>
+      <div class="kpi-value" id="kpiHighPriority" style="color:#fcd34d;"><span class="skeleton" style="width:60px;height:22px;"></span></div>
       <div class="kpi-note">Uncalibrated Dynamic Index</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-title">Legacy Incidents</div>
-      <div class="kpi-value" id="kpiIncidents">--</div>
-      <div class="kpi-note" id="kpiIncidentsNote">Phase 2/4 Inventory (/api/incidents)</div>
+    <div class="kpi-card" style="--kpi-accent:#8b5cf6;">
+      <div class="kpi-title">Catalogued Incidents</div>
+      <div class="kpi-value" id="kpiIncidents"><span class="skeleton" style="width:60px;height:22px;"></span></div>
+      <div class="kpi-note" id="kpiIncidentsNote">Phase 2/4 Inventory</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="--kpi-accent:#06b6d4;">
       <div class="kpi-title">Monitored Episodes</div>
-      <div class="kpi-value" id="kpiEpisodes">--</div>
+      <div class="kpi-value" id="kpiEpisodes"><span class="skeleton" style="width:60px;height:22px;"></span></div>
       <div class="kpi-note">Historical Archive &amp; Watch Log</div>
     </div>
   </section>
 
-  <!-- Console Map + Side Panel -->
+  <!-- ===== CONSOLE: MAP + SIDE PANEL ===== -->
   <section class="console-layout">
-    <!-- Map Container -->
+
+    <!-- Map -->
     <div class="map-container">
       <div class="map-controls-bar">
         <div class="layer-selector" id="layerSelector">
           <button class="layer-btn active" data-layer="dynamic">Dynamic Priority</button>
           <button class="layer-btn" data-layer="static">Static Susceptibility</button>
-          <button class="layer-btn" data-layer="forecast">Forecast 24h Rain</button>
+          <button class="layer-btn" data-layer="forecast">Forecast 24h</button>
           <button class="layer-btn" data-layer="observed">Observed Monsoonal</button>
           <button class="layer-btn" data-layer="incidents">Historical Incidents</button>
         </div>
-        <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">
-          Domain: 77.45°-77.75°E, 12.85°-13.15°N | 9 NWP Anchors
+        <div style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);">
+          Domain: 77.45&ndash;77.75&deg;E &nbsp;|&nbsp; 12.85&ndash;13.15&deg;N &nbsp;|&nbsp; 9 NWP Anchors
         </div>
       </div>
       <div id="map"></div>
     </div>
 
-    <!-- Inspector Side Panel -->
+    <!-- Side Panel -->
     <div class="side-panel">
       <div class="panel-header">
         <div class="panel-title">Cell Inspector</div>
-        <div id="inspectorRankBadge" class="badge badge-info">Rank #1 / 1,170</div>
+        <div id="inspectorRankBadge" class="chip chip-info">Rank #1 / 1,170</div>
       </div>
       <div class="panel-tabs">
         <button class="tab-btn active" data-tab="inspectorTab">Cell Audit</button>
         <button class="tab-btn" data-tab="forecastTab">72h Timeline</button>
-        <button class="tab-btn" data-tab="incidentsTab">Incidents (21)</button>
+        <button class="tab-btn" data-tab="incidentsTab">Incidents</button>
       </div>
 
+      <!-- Cell Audit Tab -->
       <div class="panel-body" id="inspectorTab">
         <div class="cell-id-badge" id="inspCellId">Loading...</div>
-        <span class="badge badge-info" id="inspLevelBadge">LOADING</span>
+        <span class="state-badge state-active" id="inspLevelBadge">LOADING</span>
 
         <div class="score-banner" style="margin-top: 10px;">
           <div class="score-row">
@@ -593,160 +885,210 @@
             <span class="score-val" id="inspScore">--</span>
           </div>
           <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="inspScoreBar" style="width: 0%;"></div>
+            <div class="progress-bar-fill" id="inspScoreBar" style="width:0%"></div>
           </div>
-          <div style="font-size: 11px; color: var(--text-muted);">
-            Exploratory multi-criteria screening index [0, 1]. Non-probabilistic; incident evidence excluded to prevent circularity.
+          <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">
+            Exploratory multi-criteria index [0, 1]. Non-probabilistic; incident evidence excluded.
           </div>
         </div>
 
-        <div class="section-title">Layer 1: Static Susceptibility (MCDA)</div>
+        <div class="section-title">Layer 1 &mdash; Static Susceptibility (MCDA)</div>
         <table class="meta-table">
-          <tr><td>Mean Elevation:</td><td id="inspElev">--</td></tr>
-          <tr><td>Elevation Std Dev:</td><td id="inspElevStd">--</td></tr>
-          <tr><td>Built-Up Fraction:</td><td id="inspBuilt">--</td></tr>
-          <tr><td>Tree Cover Fraction:</td><td id="inspTree">--</td></tr>
-          <tr><td>Water Fraction:</td><td id="inspWater">--</td></tr>
-          <tr><td>Static Susceptibility Score:</td><td id="inspStaticScore">--</td></tr>
-          <tr><td>Static Domain Rank:</td><td id="inspStaticRank">--</td></tr>
+          <tr><td>Mean Elevation</td><td id="inspElev">--</td></tr>
+          <tr><td>Elevation Std Dev</td><td id="inspElevStd">--</td></tr>
+          <tr><td>Built-Up Fraction</td><td id="inspBuilt">--</td></tr>
+          <tr><td>Tree Cover Fraction</td><td id="inspTree">--</td></tr>
+          <tr><td>Water Fraction</td><td id="inspWater">--</td></tr>
+          <tr><td>Static Score</td><td id="inspStaticScore">--</td></tr>
+          <tr><td>Static Domain Rank</td><td id="inspStaticRank">--</td></tr>
         </table>
 
-        <div class="section-title">Layer 2: Observed Monsoonal Exposure <span id="inspObsStateBadge" class="badge badge-warning" style="font-size:9px; margin-left:4px;">STALE</span></div>
+        <div class="section-title">
+          Layer 2 &mdash; Observed Monsoonal Exposure
+          <span id="inspObsStateBadge" class="chip chip-warning" style="font-size:9px; margin-left:4px;">STALE</span>
+        </div>
         <table class="meta-table">
-          <tr><td>Historical 24h Baseline:</td><td id="inspObs24h">--</td></tr>
-          <tr><td>Antecedent API (7d Decay):</td><td id="inspObsApi">--</td></tr>
-          <tr><td>Observed Exposure Score:</td><td id="inspObsScore">--</td></tr>
-          <tr><td>Provenance / Freshness:</td><td id="inspObsSource" style="font-size:10px; color:#b45309;">--</td></tr>
+          <tr><td>Historical 24h Baseline</td><td id="inspObs24h">--</td></tr>
+          <tr><td>Antecedent API (7d Decay)</td><td id="inspObsApi">--</td></tr>
+          <tr><td>Observed Exposure Score</td><td id="inspObsScore">--</td></tr>
+          <tr><td>Provenance / Freshness</td><td id="inspObsSource" style="font-size:10px; color:#b45309;">--</td></tr>
         </table>
 
-        <div class="section-title">Layer 3: NWP Forecast Exposure (9-13km Grid)</div>
+        <div class="section-title">Layer 3 &mdash; NWP Forecast Exposure (9&ndash;13 km)</div>
         <table class="meta-table">
-          <tr><td>Forecast 3h Accumulation:</td><td id="inspFc3h">--</td></tr>
-          <tr><td>Forecast 6h Accumulation:</td><td id="inspFc6h">--</td></tr>
-          <tr><td>Forecast 24h Accumulation:</td><td id="inspFc24h">--</td></tr>
-          <tr><td>Forecast 72h Accumulation:</td><td id="inspFc72h">--</td></tr>
-          <tr><td>Peak Hourly Intensity:</td><td id="inspFcPeak">--</td></tr>
-          <tr><td>Rainfall Intensity Category:</td><td id="inspFcCategory">--</td></tr>
+          <tr><td>Forecast 3h Accumulation</td><td id="inspFc3h">--</td></tr>
+          <tr><td>Forecast 6h Accumulation</td><td id="inspFc6h">--</td></tr>
+          <tr><td>Forecast 24h Accumulation</td><td id="inspFc24h">--</td></tr>
+          <tr><td>Forecast 72h Accumulation</td><td id="inspFc72h">--</td></tr>
+          <tr><td>Peak Hourly Intensity</td><td id="inspFcPeak">--</td></tr>
+          <tr><td>Intensity Category</td><td id="inspFcCategory">--</td></tr>
         </table>
-        <div style="font-size:10px; color:var(--text-muted); margin-top:-4px; margin-bottom:8px;">
-          * Internal classification based on rolling 24h forecast depth. Not an official government flood advisory.
+        <div style="font-size:10px; color:var(--text-muted); margin-top:-2px; margin-bottom:8px;">
+          Internal classification. Not an official government flood advisory.
         </div>
 
-        <div class="section-title">Layer 4: Ground Flood Evidence</div>
+        <div class="section-title">Layer 4 &mdash; Ground Flood Evidence</div>
         <table class="meta-table">
-          <tr><td>Reported Flood Incident:</td><td id="inspHasInc">--</td></tr>
-          <tr><td>Incident Count in Cell:</td><td id="inspIncCount">--</td></tr>
-          <tr><td>Evidence Categories:</td><td id="inspIncCat">--</td></tr>
+          <tr><td>Reported Flood Incident</td><td id="inspHasInc">--</td></tr>
+          <tr><td>Incident Count</td><td id="inspIncCount">--</td></tr>
+          <tr><td>Evidence Categories</td><td id="inspIncCat">--</td></tr>
         </table>
       </div>
 
-
-      <!-- 72h Forecast Timeline Tab -->
+      <!-- 72h Timeline Tab -->
       <div class="panel-body" id="forecastTab" style="display:none;">
-        <h4 style="font-size: 13px; font-weight:700; margin-bottom: 8px;">Multi-Horizon Forecast Accumulation</h4>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
-          NWP Issue Time: Nominal reference hour (ECMWF IFS / GFS Seamless). Decoupled issue time prevents forward leakage.
+        <div class="section-title" style="margin-top:0;">Multi-Horizon NWP Accumulation</div>
+        <p style="font-size:10px; color:var(--text-muted); margin-bottom:12px;">
+          Reference: ECMWF IFS / GFS Seamless. Decoupled issue time prevents forward leakage.
         </p>
         <div id="forecastBars"></div>
       </div>
 
       <!-- Incidents Tab -->
       <div class="panel-body" id="incidentsTab" style="display:none;">
-        <h4 style="font-size: 13px; font-weight:700; margin-bottom: 8px;">Catalogued Flood Events (21)</h4>
-        <div id="incidentsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="section-title" style="margin-top:0;">Catalogued Flood Events</div>
+        <div id="incidentsList" style="display:flex; flex-direction:column; gap:7px;"></div>
       </div>
     </div>
   </section>
 
-  <!-- Bottom Analytics & Verification Section -->
+  <!-- ===== BOTTOM ANALYTICS SECTION ===== -->
   <section class="bottom-section">
     <div class="tab-card">
-      <div class="panel-tabs">
-        <button class="tab-btn active" data-bottom-tab="episodesTableTab">Monitored Rainfall Episodes (6)</button>
-        <button class="tab-btn" data-bottom-tab="manifestTableTab">Cryptographic Manifest & Data Quality Audit</button>
-        <button class="tab-btn" data-bottom-tab="devSarTab" style="color:#b91c1c;">Testing & Dev Fixtures (Quarantined SAR)</button>
-        <button class="tab-btn" data-bottom-tab="phase5Tab" style="color:#0284c7; font-weight:700;">Phase 5: Scientific Validation & Readiness Gates</button>
-        <button class="tab-btn" data-bottom-tab="phase6Tab" style="color:#16a34a; font-weight:700;">Phase 6: Genuine Meteorology, SAR & Hydrology</button>
-        <button class="tab-btn" data-bottom-tab="alertsTab" style="color:#b45309; font-weight:700;">Operational Alerts (Research-Only) <span id="alertTabCount" class="badge badge-info">0</span></button>
+
+      <!-- Bottom Tab Bar -->
+      <div class="bottom-tabs">
+        <button class="bottom-tab-btn active" data-bottom-tab="episodesTableTab">Rainfall Episodes</button>
+        <button class="bottom-tab-btn" data-bottom-tab="manifestTableTab">Data Manifest</button>
+        <button class="bottom-tab-btn" data-bottom-tab="devSarTab">Development Fixtures</button>
+        <button class="bottom-tab-btn" data-bottom-tab="phase5Tab">Scientific Validation</button>
+        <button class="bottom-tab-btn" data-bottom-tab="phase6Tab">Multi-Source Intelligence</button>
+        <button class="bottom-tab-btn" data-bottom-tab="alertsTab">
+          Alert Candidates
+          <span id="alertTabCount" class="tab-count-badge">0</span>
+        </button>
       </div>
 
-      <!-- Operational Alerts (Research-Only) Tab -->
-      <div id="alertsTab" class="data-table-container" style="display:none; padding:16px;">
-        <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; padding:12px 16px; border-radius:6px; margin-bottom:14px;">
-          <strong style="color:#991b1b; font-size:12px; text-transform:uppercase;">INTERNAL RESEARCH-ONLY CANDIDATE ALERTS — NOT A PUBLIC EMERGENCY WARNING</strong>
-          <div style="font-size:12px; color:#7f1d1d; margin-top:4px;">
-            Public emergency notifications are <strong>DISABLED</strong>. Candidate alerts combine <strong>regional single-anchor forecast forcing</strong> (Bengaluru centroid 12.9716°N, 77.5946°E — not 1,170 independent local forecasts) with cell-level static terrain susceptibility using provisional uncalibrated thresholds. Local live rain-gauge observations are currently <code>UNAVAILABLE</code>. Stage 3 ML scores are <code>EXPERIMENTAL_UNVALIDATED</code> supporting info only and never trigger operational warnings. Missing/stale data is never treated as safe, and candidate alerts are not confirmed floods.
+      <!-- ===== ALERT CANDIDATES TAB ===== -->
+      <div id="alertsTab" style="display:none;" class="tab-content-padded">
+
+        <div class="info-banner research">
+          <div class="info-banner-body">
+            <div class="info-banner-title">Internal Research-Only Candidate Alerts &mdash; Not a Public Emergency Warning</div>
+            Public emergency notifications are <strong>DISABLED</strong>. Candidate alerts combine
+            <strong>regional single-anchor forecast forcing</strong> (Bengaluru centroid 12.9716&deg;N, 77.5946&deg;E &mdash;
+            not 1,170 independent local forecasts) with cell-level static terrain susceptibility using
+            provisional uncalibrated thresholds. Local live rain-gauge observations are currently
+            <span class="chip chip-muted" style="font-family:var(--font-mono);">UNAVAILABLE</span>.
+            Stage 3 ML scores are <span class="chip chip-warning" style="font-family:var(--font-mono);">EXPERIMENTAL_UNVALIDATED</span>
+            &mdash; supporting information only; they never trigger operational warnings.
+            Missing or stale data is never treated as safe. Candidate alerts are not confirmed floods.
           </div>
         </div>
 
-        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12px;">
-          <div>
-            <strong>Summary:</strong>
-            <span id="alertSummaryStats">Loading...</span> |
-            Latest Run: <code id="alertLatestRun">--</code> |
-            Spatial Coverage: <code id="alertSpatialCoverage">--</code> |
-            System Health: <code id="systemHealthBadge">--</code> |
-            Public Dispatch: <span class="badge" style="background:#fee2e2; color:#991b1b;">DISABLED</span>
+        <div class="alert-controls-bar">
+          <div class="alert-stat-row">
+            <div class="stat-item">
+              <span class="stat-label">Alert Status</span>
+              <span class="stat-value" id="alertSummaryStats"><span class="skeleton" style="width:160px;height:13px;"></span></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Latest Run</span>
+              <span class="stat-value" id="alertLatestRun" style="font-size:11px;"><span class="skeleton" style="width:120px;height:12px;"></span></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Spatial Coverage</span>
+              <span class="stat-value" id="alertSpatialCoverage" style="font-size:11px;"><span class="skeleton" style="width:100px;height:12px;"></span></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">System Health</span>
+              <span class="stat-value" id="systemHealthBadge" style="font-size:11px;"><span class="skeleton" style="width:100px;height:12px;"></span></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Public Dispatch</span>
+              <span class="chip chip-danger" style="font-size:10px;">DISABLED</span>
+            </div>
           </div>
-          <button id="evalAlertsNowBtn" onclick="evaluateAlertsNow()" style="padding:6px 12px; font-size:12px; font-weight:600; background:#0f172a; color:#fff; border:none; border-radius:4px; cursor:pointer;">Re-evaluate Alerts</button>
+          <button class="action-btn" id="evalAlertsNowBtn" onclick="evaluateAlertsNow()">Re-evaluate Now</button>
         </div>
 
-        <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Spatial Alert Clusters (5.5 km Sector Tiles)</h4>
-        <table class="data-table" style="margin-bottom:18px;">
-          <thead>
-            <tr>
-              <th>Cluster ID</th>
-              <th>Forecast Zone</th>
-              <th>Max Severity</th>
-              <th>Cells (Active / Ack)</th>
-              <th>Sample Grid IDs</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="alertClustersTbody">
-            <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading clusters...</td></tr>
-          </tbody>
-        </table>
+        <div class="section-heading">
+          <span class="track-label" style="background:#1d4ed8; color:#fff;">Spatial</span>
+          Alert Clusters &mdash; 5.5 km Sector Tiles
+        </div>
+        <div class="data-table-container" style="margin-bottom:18px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Cluster ID</th>
+                <th>Forecast Zone</th>
+                <th>Max Severity</th>
+                <th>Cells (Active / Ack)</th>
+                <th>Sample Grid IDs</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="alertClustersTbody">
+              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Active &amp; Acknowledged Candidate Alerts</h4>
-        <table class="data-table" style="margin-bottom:18px;">
-          <thead>
-            <tr>
-              <th>Alert ID</th>
-              <th>Severity</th>
-              <th>Grid &amp; Location</th>
-              <th>Rule &amp; Triggering Reason</th>
-              <th>Source &amp; Freshness</th>
-              <th>Qualification</th>
-              <th>Created / Updated</th>
-              <th>State &amp; Actions</th>
-            </tr>
-          </thead>
-          <tbody id="activeAlertsTbody">
-            <tr><td colspan="8" style="text-align:center; color:#64748b;">Loading alerts...</td></tr>
-          </tbody>
-        </table>
+        <div class="section-heading">
+          <span class="track-label" style="background:#ef4444; color:#fff;">Active</span>
+          Active &amp; Acknowledged Candidate Alerts
+        </div>
+        <div class="data-table-container" style="margin-bottom:18px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Alert ID</th>
+                <th>Severity</th>
+                <th>Grid &amp; Location</th>
+                <th>Rule &amp; Triggering Reason</th>
+                <th>Source &amp; Freshness</th>
+                <th>Qualification</th>
+                <th>Created / Updated</th>
+                <th>State &amp; Actions</th>
+              </tr>
+            </thead>
+            <tbody id="activeAlertsTbody">
+              <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Alert History (Resolved &amp; Expired)</h4>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Alert ID</th>
-              <th>Severity</th>
-              <th>Grid ID</th>
-              <th>Rule</th>
-              <th>Qualification</th>
-              <th>Updated / Resolution</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody id="historyAlertsTbody">
-            <tr><td colspan="7" style="text-align:center; color:#64748b;">Loading alert history...</td></tr>
-          </tbody>
-        </table>
+        <div class="section-heading">
+          <span class="track-label" style="background:#374151; color:#9ca3af;">History</span>
+          Resolved &amp; Expired Alert Log
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Alert ID</th>
+                <th>Severity</th>
+                <th>Grid ID</th>
+                <th>Rule</th>
+                <th>Qualification</th>
+                <th>Updated / Resolution</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody id="historyAlertsTbody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:16px;">
+                <span class="skeleton" style="width:160px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Episodes Log Table -->
+      <!-- ===== RAINFALL EPISODES TAB ===== -->
       <div id="episodesTableTab" class="data-table-container">
         <table class="data-table">
           <thead>
@@ -763,13 +1105,14 @@
             </tr>
           </thead>
           <tbody id="episodesTbody">
-            <tr><td colspan="9" style="text-align:center;">Loading monitoring log...</td></tr>
+            <tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:14px;">
+              <span class="skeleton" style="width:220px;height:12px;display:inline-block;"></span>
+            </td></tr>
           </tbody>
         </table>
       </div>
 
-
-      <!-- Manifest Verification Table -->
+      <!-- ===== DATA MANIFEST TAB ===== -->
       <div id="manifestTableTab" class="data-table-container" style="display:none;">
         <table class="data-table">
           <thead>
@@ -782,27 +1125,28 @@
             </tr>
           </thead>
           <tbody id="manifestTbody">
-            <tr><td colspan="5" style="text-align:center;">Verifying cryptographic manifest...</td></tr>
+            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">
+              <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+            </td></tr>
           </tbody>
         </table>
       </div>
 
-
-      <!-- Quarantined SAR Development & Testing Tab -->
+      <!-- ===== DEV FIXTURES TAB ===== -->
       <div id="devSarTab" class="data-table-container" style="display:none; padding:16px;">
-        <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; padding:12px 16px; border-radius:4px; margin-bottom:14px;">
-          <strong style="color:#991b1b; font-size:13px; text-transform:uppercase; letter-spacing:0.04em;">
-            SYNTHETIC TEST DATA — NOT SATELLITE OBSERVATION
-          </strong>
-          <p style="font-size:12px; color:#7f1d1d; margin-top:6px; line-height:1.5;">
-            The Sentinel-1 SAR change footprints generated in Phase 2A.5 are <strong>simulated synthetic engineering fixtures</strong> used exclusively for pipeline plumbing and unit testing. They are <strong>strictly quarantined</strong> and permanently excluded from all observational flood risk matrices.
-          </p>
+        <div class="info-banner synthetic">
+          <div class="info-banner-body">
+            <div class="info-banner-title">Synthetic Test Data &mdash; Not Satellite Observation</div>
+            The Sentinel-1 SAR change footprints generated in Phase 2A.5 are <strong>simulated synthetic engineering fixtures</strong>
+            used exclusively for pipeline plumbing and unit testing. They are <strong>strictly quarantined</strong> and
+            permanently excluded from all observational flood risk matrices.
+          </div>
         </div>
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-          <button id="toggleSarDevBtn" style="background:#7c3aed; color:#ffffff; border:none; padding:8px 16px; border-radius:4px; font-weight:600; font-size:12px; cursor:pointer;">
-            Toggle Synthetic SAR Extent on Map (Dev View)
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+          <button id="toggleSarDevBtn" class="action-btn" style="background:#6d28d9;">
+            Toggle Synthetic SAR Extent on Map
           </button>
-          <span id="sarToggleState" style="font-size:12px; color:var(--text-muted); font-family:var(--font-mono);">Status: Hidden (Quarantined)</span>
+          <span id="sarToggleState" style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">Hidden (Quarantined)</span>
         </div>
         <table class="data-table">
           <thead>
@@ -815,110 +1159,114 @@
           </thead>
           <tbody>
             <tr>
-              <td>S1A_IW_GRDH_1SDV_20220812T004240_SIMULATED</td>
+              <td style="font-family:var(--font-mono); font-size:10px;">S1A_IW_GRDH_1SDV_20220812T004240_SIMULATED</td>
               <td>Orbit 165 Descending</td>
               <td>Pre-Event (Synthetic)</td>
-              <td><span class="badge badge-purple">SYNTHETIC_TEST_ONLY_QUARANTINED</span></td>
+              <td><span class="chip chip-purple">SYNTHETIC_TEST_ONLY</span></td>
             </tr>
             <tr>
-              <td>S1A_IW_GRDH_1SDV_20220905T004241_SIMULATED</td>
+              <td style="font-family:var(--font-mono); font-size:10px;">S1A_IW_GRDH_1SDV_20220905T004241_SIMULATED</td>
               <td>Orbit 165 Descending</td>
               <td>Post-Event (Synthetic, 24d delta)</td>
-              <td><span class="badge badge-purple">SYNTHETIC_TEST_ONLY_QUARANTINED</span></td>
+              <td><span class="chip chip-purple">SYNTHETIC_TEST_ONLY</span></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-
-      <!-- Phase 5: Scientific Validation & Readiness Gates Tab -->
+      <!-- ===== SCIENTIFIC VALIDATION TAB (Phase 5) ===== -->
       <div id="phase5Tab" class="data-table-container" style="display:none; padding:16px;">
-        <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #d97706; padding:12px 16px; border-radius:6px; margin-bottom:16px;">
-          <strong style="color:#92400e; font-size:13px; text-transform:uppercase;">Phase 5.2 Scientific Reconciliation Notice:</strong>
-          <span style="font-size:12px; color:#78350f; display:block; margin-top:4px;">
-            Forecast series is classified as <strong>OBSERVATION_CALIBRATED_RETROSPECTIVE_SERIES</strong>. Reconstructed from historical rainfall event curves rather than authenticated archived NWP provider files. 
-            All forecast metrics are exploratory retrospective benchmarks, <strong>NOT VERIFIED NWP FORECAST SKILL</strong>. Supervised flood ML modeling remains <strong>BLOCKED</strong> due to 98.13% spatial domain censorship.
-          </span>
+        <div class="info-banner caution" style="margin-bottom:16px;">
+          <div class="info-banner-body">
+            <div class="info-banner-title">Phase 5.2 Scientific Reconciliation Notice</div>
+            Forecast series classified as <strong>OBSERVATION_CALIBRATED_RETROSPECTIVE_SERIES</strong>.
+            Reconstructed from historical rainfall event curves; raw provider GRIB2/NetCDF files not in archive.
+            All metrics are exploratory retrospective benchmarks, <strong>NOT verified NWP forecast skill</strong>.
+            Supervised flood ML modeling remains <strong>BLOCKED</strong> due to 98.13% spatial domain censorship.
+          </div>
         </div>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px; margin-bottom:20px;">
-          <!-- Gate A Card -->
-          <div style="background:#fff7ed; border:1px solid #fed7aa; border-left:4px solid #ea580c; padding:14px; border-radius:6px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <strong style="color:#9a3412; font-size:13px; text-transform:uppercase;">Gate A: NWP Forecast Skill</strong>
-              <span class="badge" style="background:#ffedd5; color:#c2410c; border:1px solid #fdba74;" id="gateABadge">BLOCKED BY PROVENANCE</span>
+
+        <div class="gate-grid">
+          <div class="gate-card">
+            <div class="gate-card-header">
+              <div class="gate-card-title">Gate A: NWP Forecast Skill</div>
+              <span class="state-badge state-blocked" id="gateABadge">BLOCKED BY PROVENANCE</span>
             </div>
-            <p style="font-size:12px; color:#7c2d12; line-height:1.5;">
+            <div class="gate-card-body">
               <strong>Classification:</strong> OBSERVATION_CALIBRATED_RETROSPECTIVE_SERIES<br>
-              <strong>Status:</strong> Genuine NWP Verification NOT Established. Calibrated to historical observed rainfall synoptic curves; raw provider GRIB2/NetCDF files not in archive.<br>
-              <span style="color:#b91c1c; font-weight:600;">Operational Constraint:</span> Automated public alerts strictly prohibited. Retained as exploratory retrospective benchmark only.
-            </p>
-          </div>
-          <!-- Gate B Card -->
-          <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; padding:14px; border-radius:6px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <strong style="color:#991b1b; font-size:13px; text-transform:uppercase;">Gate B: Supervised Flood ML</strong>
-              <span class="badge badge-warning" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;" id="gateBBadge">BLOCKED BY DATA ACCESS</span>
+              <strong>Status:</strong> Genuine NWP verification not established. Calibrated to historical observed rainfall synoptic curves.<br>
+              <span style="color:#f87171; font-weight:600;">Operational Constraint:</span> Automated public alerts strictly prohibited. Retained as exploratory benchmark only.
             </div>
-            <p style="font-size:12px; color:#7f1d1d; line-height:1.5;">
-              <strong>Domain Censorship:</strong> 98.13% Unobserved (1,148 of 1,170 cells). Zero verified valley dry observations; 5 candidate negatives are high-ground ridge weather stations.<br>
-              <strong>Status:</strong> Supervised machine learning is strictly blocked. Any ML model trained on 13 positives will learn severe reporting bias.<br>
-              <strong>Permitted Work:</strong> Unsupervised physical vulnerability and antecedent rainfall indexing approved.
-            </p>
+          </div>
+          <div class="gate-card">
+            <div class="gate-card-header">
+              <div class="gate-card-title">Gate B: Supervised Flood ML</div>
+              <span class="state-badge state-blocked" id="gateBBadge">BLOCKED BY DATA ACCESS</span>
+            </div>
+            <div class="gate-card-body">
+              <strong>Domain Censorship:</strong> 98.13% Unobserved (1,148 of 1,170 cells).<br>
+              <strong>Status:</strong> Supervised ML strictly blocked. Any model trained on 13 positives will learn severe reporting bias.<br>
+              <strong>Permitted:</strong> Unsupervised physical vulnerability and antecedent rainfall indexing approved.
+            </div>
           </div>
         </div>
 
-        <!-- Track A Table -->
-        <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-          <span style="background:#d97706; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">TRACK A — RETROSPECTIVE</span>
-          Retrospective Reconstructed Series vs Observations (183,690 Raw Pairs across 711 Anchor-Time Groups — NOT Verified NWP Skill)
-        </h4>
-        <table class="data-table" style="margin-bottom:20px;">
-          <thead>
-            <tr>
-              <th>Lead Time</th>
-              <th>Accum. Interval</th>
-              <th>Precip. Threshold</th>
-              <th>Sample Size (N)</th>
-              <th>MAE (mm)</th>
-              <th>RMSE (mm)</th>
-              <th>Pearson r</th>
-              <th>POD</th>
-              <th>FAR</th>
-              <th>CSI</th>
-              <th>Heidke Skill Score (HSS)</th>
-            </tr>
-          </thead>
-          <tbody id="phase5MetricsTbody">
-            <tr><td colspan="11" style="text-align:center;">Loading Track A verification metrics...</td></tr>
-          </tbody>
-        </table>
+        <div class="section-heading">
+          <span class="track-label" style="background:#d97706; color:#fff;">Track A</span>
+          Retrospective Series vs Observations (183,690 Raw Pairs &mdash; NOT Verified NWP Skill)
+        </div>
+        <div class="data-table-container" style="margin-bottom:20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Lead Time</th>
+                <th>Accum.</th>
+                <th>Threshold</th>
+                <th>Sample N</th>
+                <th>MAE (mm)</th>
+                <th>RMSE (mm)</th>
+                <th>Pearson r</th>
+                <th>POD</th>
+                <th>FAR</th>
+                <th>CSI</th>
+                <th>HSS</th>
+              </tr>
+            </thead>
+            <tbody id="phase5MetricsTbody">
+              <tr><td colspan="11" style="text-align:center; color:var(--text-muted); padding:14px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <!-- Track B Tables -->
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:16px; margin-bottom:20px;">
           <div>
-            <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-              <span style="background:#16a34a; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">TRACK B</span>
+            <div class="section-heading">
+              <span class="track-label" style="background:#16a34a; color:#fff;">Track B</span>
               7-Class Validation Taxonomy (1,170 Cells)
-            </h4>
+            </div>
             <table class="data-table">
               <thead>
                 <tr>
                   <th>Validation Class</th>
-                  <th>Cells Count</th>
+                  <th>Count</th>
                   <th>Domain %</th>
-                  <th>Evaluation Handling</th>
+                  <th>Handling</th>
                 </tr>
               </thead>
               <tbody id="phase5TaxonomyTbody">
-                <tr><td colspan="4" style="text-align:center;">Loading taxonomy...</td></tr>
+                <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:14px;">
+                  <span class="skeleton" style="width:160px;height:12px;display:inline-block;"></span>
+                </td></tr>
               </tbody>
             </table>
           </div>
           <div>
-            <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-              <span style="background:#7c3aed; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">TRACK B</span>
-              Statistical Indicator Discrimination & Spatial Buffers
-            </h4>
+            <div class="section-heading">
+              <span class="track-label" style="background:#7c3aed; color:#fff;">Track B</span>
+              Indicator Discrimination &amp; Spatial Buffers
+            </div>
             <table class="data-table">
               <thead>
                 <tr>
@@ -931,131 +1279,143 @@
                 </tr>
               </thead>
               <tbody id="phase5EvalTbody">
-                <tr><td colspan="6" style="text-align:center;">Loading indicator metrics...</td></tr>
+                <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:14px;">
+                  <span class="skeleton" style="width:160px;height:12px;display:inline-block;"></span>
+                </td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Authentic SAR Manifest Table -->
-        <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-          <span style="background:#475569; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">SAR AUDIT</span>
+        <div class="section-heading">
+          <span class="track-label" style="background:#475569; color:#fff;">SAR Audit</span>
           Copernicus Sentinel-1A SAFE Level-1 GRD Scene Manifest
-        </h4>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Scene Identifier</th>
-              <th>Pass Date (UTC)</th>
-              <th>Role</th>
-              <th>Relative Orbit</th>
-              <th>Polarisation</th>
-              <th>CDSE Catalog Status</th>
-            </tr>
-          </thead>
-          <tbody id="phase5SarTbody">
-            <tr><td colspan="6" style="text-align:center;">Loading SAR manifest...</td></tr>
-          </tbody>
-        </table>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Scene Identifier</th>
+                <th>Pass Date (UTC)</th>
+                <th>Role</th>
+                <th>Relative Orbit</th>
+                <th>Polarisation</th>
+                <th>CDSE Catalog Status</th>
+              </tr>
+            </thead>
+            <tbody id="phase5SarTbody">
+              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:14px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Phase 6: Genuine Meteorology, SAR & Hydrology Tab -->
+      <!-- ===== MULTI-SOURCE INTELLIGENCE TAB (Phase 6) ===== -->
       <div id="phase6Tab" class="data-table-container" style="display:none; padding:16px;">
-        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-left:4px solid #16a34a; padding:12px 16px; border-radius:6px; margin-bottom:16px;">
-          <strong style="color:#166534; font-size:13px; text-transform:uppercase;">Phase 6 Master Delivery — Authentic Multi-Source Intelligence & Physics-Based Hydrology:</strong>
-          <span style="font-size:12px; color:#14532d; display:block; margin-top:4px;">
-            Replaces all synthetic curves with <strong>genuine archived NOAA GFS 0.25° NWP forecasts</strong> from AWS Open Data, <strong>authentic ground rain gauges (IMD & KSNDMC)</strong>, <strong>verified Sentinel-1A SAR</strong> from CDSE, and <strong>deterministic D8 topographic catchment routing</strong>. Supervised Machine Learning is strictly <strong>BLOCKED</strong> due to 98.29% domain observational censorship.
-          </span>
-        </div>
-
-        <!-- 6 Workstream Status Cards -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:20px;">
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-top:3px solid #2563eb; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">Stage 6A: Genuine NWP</div>
-            <div id="p6NwpVal" style="font-size:18px; font-weight:700; color:#0f172a; margin:4px 0;">Loading...</div>
-            <div id="p6NwpDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase6/nwp...</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-top:3px solid #0284c7; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#0369a1; text-transform:uppercase;">Stage 6B: Rain Gauges</div>
-            <div id="p6RainVal" style="font-size:18px; font-weight:700; color:#0f172a; margin:4px 0;">Loading...</div>
-            <div id="p6RainDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase6/ground-rainfall...</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-top:3px solid #dc2626; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#b91c1c; text-transform:uppercase;">Stage 6C: Ground Truth &amp; Gate</div>
-            <div id="p6GtVal" style="font-size:18px; font-weight:700; color:#991b1b; margin:4px 0;">Loading...</div>
-            <div id="p6GtDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase6/flood-evidence...</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-top:3px solid #7c3aed; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#6d28d9; text-transform:uppercase;">Stage 6D: Sentinel-1 SAR</div>
-            <div id="p6SarVal" style="font-size:18px; font-weight:700; color:#0f172a; margin:4px 0;">Loading...</div>
-            <div id="p6SarDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase6/sar...</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-top:3px solid #16a34a; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#15803d; text-transform:uppercase;">Stage 6E: D8 Hydrology</div>
-            <div id="p6HydroVal" style="font-size:18px; font-weight:700; color:#0f172a; margin:4px 0;">Loading...</div>
-            <div id="p6HydroDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase6/hydrology...</div>
-          </div>
-          <div style="background:#ffffff; border:1px solid #e2e8f0; border-top:3px solid #f59e0b; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#b45309; text-transform:uppercase;">Stage 7.2: Frozen Audit</div>
-            <div id="p7UncertVal" style="font-size:18px; font-weight:700; color:#0f172a; margin:4px 0;">Loading...</div>
-            <div id="p7UncertDesc" style="font-size:11px; color:#64748b;">Fetching /api/phase7/summary &amp; /uncertainty...</div>
-          </div>
-          <div style="background:#fffbeb; border:1px solid #fde68a; border-top:3px solid #d97706; padding:12px; border-radius:6px;">
-            <div style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase;">V8 Stage 3: Experimental ML Research</div>
-            <div id="mlExpStatusVal" style="font-size:16px; font-weight:700; color:#92400e; margin:4px 0;">Loading...</div>
-            <div id="mlExpStatusDesc" style="font-size:11px; color:#78350f;">Fetching /api/ml/experimental...</div>
+        <div class="info-banner" style="background:rgba(16,185,129,0.07); border-color:#10b981; color:#6ee7b7; margin-bottom:16px;">
+          <div class="info-banner-body">
+            <div class="info-banner-title">Phase 6 Master Delivery &mdash; Authentic Multi-Source Intelligence &amp; Physics-Based Hydrology</div>
+            Replaces all synthetic curves with <strong>genuine archived NOAA GFS 0.25&deg; NWP forecasts</strong> from AWS Open Data,
+            <strong>authentic ground rain gauges (IMD &amp; KSNDMC)</strong>, <strong>verified Sentinel-1A SAR</strong> from CDSE,
+            and <strong>deterministic D8 topographic catchment routing</strong>. Supervised ML is strictly
+            <strong>BLOCKED</strong> due to 98.29% domain observational censorship.
           </div>
         </div>
 
-        <!-- NWP vs Ground Gauges Table -->
-        <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-          <span style="background:#0284c7; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">STAGE 6B</span>
-          Authentic Ground Rain Gauge Stations & Verification Summary (21 Stations)
-        </h4>
-        <table class="data-table" style="margin-bottom:20px;">
-          <thead>
-            <tr>
-              <th>Station ID</th>
-              <th>Station Name</th>
-              <th>Network</th>
-              <th>Elev (m)</th>
-              <th>Topography</th>
-              <th>Sensor Type</th>
-              <th>Hydrological Role</th>
-            </tr>
-          </thead>
-          <tbody id="phase6StationsTbody">
-            <tr><td colspan="7" style="text-align:center;">Loading station registry...</td></tr>
-          </tbody>
-        </table>
+        <div class="stage-grid">
+          <div class="stage-card" style="border-top-color:#2563eb;">
+            <div class="stage-card-label">Stage 6A: Genuine NWP</div>
+            <div class="stage-card-value" id="p6NwpVal"><span class="skeleton" style="width:100px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="p6NwpDesc">Loading /api/phase6/nwp...</div>
+          </div>
+          <div class="stage-card" style="border-top-color:#0284c7;">
+            <div class="stage-card-label">Stage 6B: Rain Gauges</div>
+            <div class="stage-card-value" id="p6RainVal"><span class="skeleton" style="width:100px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="p6RainDesc">Loading /api/phase6/ground-rainfall...</div>
+          </div>
+          <div class="stage-card" style="border-top-color:#dc2626;">
+            <div class="stage-card-label">Stage 6C: Ground Truth &amp; Gate</div>
+            <div class="stage-card-value" id="p6GtVal" style="color:#f87171;"><span class="skeleton" style="width:100px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="p6GtDesc">Loading /api/phase6/flood-evidence...</div>
+          </div>
+          <div class="stage-card" style="border-top-color:#7c3aed;">
+            <div class="stage-card-label">Stage 6D: Sentinel-1 SAR</div>
+            <div class="stage-card-value" id="p6SarVal"><span class="skeleton" style="width:100px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="p6SarDesc">Loading /api/phase6/sar...</div>
+          </div>
+          <div class="stage-card" style="border-top-color:#16a34a;">
+            <div class="stage-card-label">Stage 6E: D8 Hydrology</div>
+            <div class="stage-card-value" id="p6HydroVal"><span class="skeleton" style="width:100px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="p6HydroDesc">Loading /api/phase6/hydrology...</div>
+          </div>
+          <div class="stage-card" style="border-top-color:#f59e0b;">
+            <div class="stage-card-label">Stage 7.2: Frozen Audit</div>
+            <div class="stage-card-value" id="p7UncertVal"><span class="skeleton" style="width:100px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="p7UncertDesc">Loading /api/phase7/summary...</div>
+          </div>
+          <div class="stage-card" style="border-top-color:#d97706;">
+            <div class="stage-card-label">V8 Stage 3: Experimental ML</div>
+            <div class="stage-card-value" id="mlExpStatusVal" style="font-size:13px;"><span class="skeleton" style="width:120px;height:16px;display:block;"></span></div>
+            <div class="stage-card-desc" id="mlExpStatusDesc">Loading /api/ml/experimental...</div>
+          </div>
+        </div>
 
-        <!-- Ground Truth & SAR Table -->
+        <div class="section-heading">
+          <span class="track-label" style="background:#0284c7; color:#fff;">Stage 6B</span>
+          Authentic Ground Rain Gauge Stations &amp; Verification Summary (21 Stations)
+        </div>
+        <div class="data-table-container" style="margin-bottom:20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Station ID</th>
+                <th>Station Name</th>
+                <th>Network</th>
+                <th>Elev (m)</th>
+                <th>Topography</th>
+                <th>Sensor Type</th>
+                <th>Hydrological Role</th>
+              </tr>
+            </thead>
+            <tbody id="phase6StationsTbody">
+              <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:16px; margin-bottom:20px;">
           <div>
-            <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-              <span style="background:#dc2626; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">STAGE 6C</span>
-              Phase 6 Independent Flood Incident Inventory (<span id="p6IncCountLabel">--</span> Records — Separate from 21 Legacy Incidents)
-            </h4>
+            <div class="section-heading">
+              <span class="track-label" style="background:#dc2626; color:#fff;">Stage 6C</span>
+              Phase 6 Independent Flood Incidents
+              (<span id="p6IncCountLabel">--</span> Records)
+            </div>
             <table class="data-table">
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Location Name</th>
+                  <th>Location</th>
                   <th>Evidence Class</th>
-                  <th>Water Depth (m)</th>
+                  <th>Water Depth</th>
                   <th>Source Type</th>
                 </tr>
               </thead>
               <tbody id="phase6GroundTruthTbody">
-                <tr><td colspan="5" style="text-align:center;">Loading Phase 6 flood evidence...</td></tr>
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">
+                  <span class="skeleton" style="width:160px;height:12px;display:inline-block;"></span>
+                </td></tr>
               </tbody>
             </table>
           </div>
           <div>
-            <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-              <span style="background:#7c3aed; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">STAGE 6D</span>
+            <div class="section-heading">
+              <span class="track-label" style="background:#7c3aed; color:#fff;">Stage 6D</span>
               Sentinel-1 SAR Ground Truth Cross-Validation
-            </h4>
+            </div>
             <table class="data-table">
               <thead>
                 <tr>
@@ -1067,89 +1427,95 @@
               <tbody id="phase6SarXvalTbody">
                 <tr>
                   <td><strong>MATCH_SPECULAR_WATER</strong></td>
-                  <td style="font-weight:700; color:#16a34a;">9 Sites</td>
-                  <td style="font-size:11px;">Clear specular backscatter drop in open swales (Rainbow Drive, Yamalur, Varthur)</td>
+                  <td style="font-weight:700; color:#34d399;">9 Sites</td>
+                  <td style="font-size:10px;">Clear specular backscatter drop in open swales (Rainbow Drive, Yamalur, Varthur)</td>
                 </tr>
                 <tr>
                   <td><strong>MATCH_CONFIRMED_DRY</strong></td>
-                  <td style="font-weight:700; color:#0284c7;">6 Sites</td>
-                  <td style="font-size:11px;">Stable backscatter confirms dry conditions on high-ground ridges & parks</td>
+                  <td style="font-weight:700; color:#60a5fa;">6 Sites</td>
+                  <td style="font-size:10px;">Stable backscatter confirms dry conditions on high-ground ridges &amp; parks</td>
                 </tr>
                 <tr>
                   <td><strong>MATCH_DOUBLE_BOUNCE</strong></td>
-                  <td style="font-weight:700; color:#d97706;">1 Site</td>
-                  <td style="font-size:11px;">Corner reflection between standing water and buildings (EcoSpace ORR carriageway)</td>
+                  <td style="font-weight:700; color:#fcd34d;">1 Site</td>
+                  <td style="font-size:10px;">Corner reflection between standing water and buildings (EcoSpace ORR)</td>
                 </tr>
                 <tr>
                   <td><strong>MISSED_BY_SAR</strong></td>
-                  <td style="font-weight:700; color:#dc2626;">3 Sites</td>
-                  <td style="font-size:11px;">C-band pulse obscured by dense urban street canyons and tree canopy (Koramangala, HBR)</td>
+                  <td style="font-weight:700; color:#f87171;">3 Sites</td>
+                  <td style="font-size:10px;">C-band pulse obscured by dense urban street canyons and tree canopy</td>
                 </tr>
                 <tr>
                   <td><strong>FALSE_ALARM_BY_SAR</strong></td>
-                  <td style="font-weight:700; color:#64748b;">1 Site</td>
-                  <td style="font-size:11px;">Soil moisture / dielectric change over granitic park clearing</td>
+                  <td style="font-weight:700; color:#94a3b8;">1 Site</td>
+                  <td style="font-size:10px;">Soil moisture / dielectric change over granitic park clearing</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Phase 6 Master Manifest Table -->
-        <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-          <span style="background:#16a34a; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">STAGE 6F</span>
-          Phase 6 Cryptographic Dataset Manifest (16 Datasets — 100% Verified Bit-for-Bit)
-        </h4>
-        <table class="data-table" style="margin-bottom:20px;">
-          <thead>
-            <tr>
-              <th>Dataset ID</th>
-              <th>Stage</th>
-              <th>File Size</th>
-              <th>SHA-256 Checksum</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody id="phase6ManifestTbody">
-            <tr><td colspan="5" style="text-align:center;">Loading Phase 6 master manifest...</td></tr>
-          </tbody>
-        </table>
+        <div class="section-heading">
+          <span class="track-label" style="background:#16a34a; color:#fff;">Stage 6F</span>
+          Phase 6 Cryptographic Dataset Manifest (16 Datasets &mdash; 100% SHA-256 Verified)
+        </div>
+        <div class="data-table-container" style="margin-bottom:20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Dataset ID</th>
+                <th>Stage</th>
+                <th>File Size</th>
+                <th>SHA-256 (Prefix)</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="phase6ManifestTbody">
+              <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
 
-        <!-- Phase 7 Final Frozen Manifest Table -->
-        <h4 style="font-size:13px; color:#0f172a; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-          <span style="background:#0f172a; color:#fff; padding:2px 8px; border-radius:3px; font-size:10px;">PHASE 7.2</span>
-          Authoritative Frozen Master Manifest (<span id="p7ManCountLabel">--</span> Datasets — /api/phase7/manifest)
-        </h4>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Dataset ID</th>
-              <th>Phase / Stage</th>
-              <th>File Size</th>
-              <th>SHA-256 Checksum</th>
-              <th>Path</th>
-            </tr>
-          </thead>
-          <tbody id="phase7ManifestTbody">
-            <tr><td colspan="5" style="text-align:center;">Loading Phase 7 final manifest...</td></tr>
-          </tbody>
-        </table>
+        <div class="section-heading">
+          <span class="track-label" style="background:#0f172a; color:#94a3b8;">Phase 7.2</span>
+          Authoritative Frozen Master Manifest (<span id="p7ManCountLabel">--</span> Datasets)
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Dataset ID</th>
+                <th>Phase / Stage</th>
+                <th>File Size</th>
+                <th>SHA-256 (Prefix)</th>
+                <th>Path</th>
+              </tr>
+            </thead>
+            <tbody id="phase7ManifestTbody">
+              <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">
+                <span class="skeleton" style="width:200px;height:12px;display:inline-block;"></span>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Scientific Disclaimer Footer -->
-      <div class="disclaimer-box">
-        <strong>SCIENTIFIC & OPERATIONAL METHODOLOGY DISCLAIMER:</strong>
-        <p style="margin-top: 4px;">
-          1. <em>Static Susceptibility</em> is derived via multi-criteria evaluation (MCDA) of SRTM 30m elevation and ESA WorldCover 10m land cover; it does NOT simulate micro-drainage networks or hydrodynamic pump dynamics.<br>
-          2. <em>Forecast Exposure</em> is derived from Open-Meteo NWP continuous forecasts mapped from 9 coarse regional anchors (9-13 km native grid); it represents atmospheric hazard exposure, NOT direct flood inundation.<br>
-          3. <em>Sentinel-1 SAR</em> simulated rasters are strictly quarantined (<code>SYNTHETIC_TEST_ONLY_QUARANTINED</code>) and excluded from all statistical and machine-learning feature datasets.<br>
-          4. <em>Exit Status:</em> Decision B (Operational dynamic intelligence validated; supervised flood prediction blocked pending authoritative flood depth labels).
-        </p>
+      <!-- ===== DISCLAIMER FOOTER ===== -->
+      <div class="footer-disclaimer">
+        <strong style="color:var(--text-main);">Scientific &amp; Operational Methodology Disclaimer:</strong>
+        <span style="margin-left:6px;">
+          1. <em>Static Susceptibility</em> is derived via MCDA from SRTM 30m elevation and ESA WorldCover 10m land cover; it does not simulate micro-drainage networks or hydrodynamic pump dynamics. &nbsp;|&nbsp;
+          2. <em>Forecast Exposure</em> is derived from Open-Meteo NWP continuous forecasts mapped from 9 coarse regional anchors (9&ndash;13 km native grid); it represents atmospheric hazard exposure, not direct flood inundation. &nbsp;|&nbsp;
+          3. <em>Sentinel-1 SAR</em> simulated rasters are strictly quarantined (<span style="font-family:var(--font-mono); font-size:10px;">SYNTHETIC_TEST_ONLY_QUARANTINED</span>) and excluded from all statistical and ML feature datasets. &nbsp;|&nbsp;
+          4. <em>Exit Status:</em> Decision B (operational dynamic intelligence validated; supervised flood prediction blocked pending authoritative flood depth labels).
+        </span>
       </div>
     </div>
   </section>
 
-  <!-- Leaflet JS -->
+  <!-- ===== Leaflet JS ===== -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
     let map;
@@ -1163,18 +1529,18 @@
     let episodesData = [];
     let legendControl;
 
-    // Color Scales
+    // ─── Color Scales ───
     function getDynamicColor(score) {
-      if (score === null || score === undefined) return "#cbd5e1";
-      if (score > 0.70) return "#dc2626"; // Critical Red
-      if (score > 0.55) return "#ea580c"; // High Orange
-      if (score > 0.40) return "#f59e0b"; // Moderate Amber
-      if (score > 0.25) return "#84cc16"; // Low-Mod Lime
-      return "#10b981"; // Normal Green
+      if (score === null || score === undefined) return "#1e3a5a";
+      if (score > 0.70) return "#dc2626";
+      if (score > 0.55) return "#ea580c";
+      if (score > 0.40) return "#f59e0b";
+      if (score > 0.25) return "#84cc16";
+      return "#10b981";
     }
 
     function getStaticColor(score) {
-      if (score === null || score === undefined) return "#cbd5e1";
+      if (score === null || score === undefined) return "#1e3a5a";
       if (score > 0.70) return "#7f1d1d";
       if (score > 0.55) return "#b91c1c";
       if (score > 0.40) return "#f97316";
@@ -1183,31 +1549,31 @@
     }
 
     function getForecastColor(val24h) {
-      if (val24h === null || val24h === undefined) return "#cbd5e1";
-      if (val24h >= 64.5) return "#dc2626"; // Heavy Rain Category (Red)
-      if (val24h >= 35.5) return "#f97316"; // Moderate-High (Orange)
-      if (val24h >= 15.6) return "#facc15"; // Moderate Rain Category (Yellow)
-      return "#22c55e"; // Light Rain Category (Green)
+      if (val24h === null || val24h === undefined) return "#1e3a5a";
+      if (val24h >= 64.5) return "#dc2626";
+      if (val24h >= 35.5) return "#f97316";
+      if (val24h >= 15.6) return "#facc15";
+      return "#22c55e";
     }
 
     function getObservedColor(val) {
-      if (val === null || val === undefined) return "#cbd5e1";
-      if (val > 120) return "#1e1b4b"; // Deep Navy
+      if (val === null || val === undefined) return "#1e3a5a";
+      if (val > 120) return "#1e1b4b";
       if (val > 90)  return "#312e81";
       if (val > 60)  return "#4338ca";
       if (val > 30)  return "#6366f1";
-      return "#c7d2fe"; // Light Blue
+      return "#c7d2fe";
     }
 
     function getIncidentColor(category) {
       if (category === "Confirmed Inundation") return "#dc2626";
       if (category === "Reported Waterlogging") return "#ea580c";
-      return "#7c3aed"; // Flood Disruption
+      return "#7c3aed";
     }
 
     function styleFeature(feature) {
       const p = feature.properties;
-      let fill = "#cbd5e1";
+      let fill = "#1e3a5a";
       let fillOpacity = 0.65;
 
       if (activeLayerType === "dynamic") {
@@ -1219,58 +1585,32 @@
       } else if (activeLayerType === "observed") {
         fill = getObservedColor(p.observed_rainfall_24h_mm);
       } else if (activeLayerType === "incidents") {
-        fill = p.has_ground_flood_evidence ? "#dc2626" : "#e2e8f0";
+        fill = p.has_ground_flood_evidence ? "#dc2626" : "#1e293b";
         fillOpacity = p.has_ground_flood_evidence ? 0.75 : 0.35;
       }
 
-      return {
-        fillColor: fill,
-        weight: 1,
-        opacity: 0.8,
-        color: "#ffffff",
-        fillOpacity: fillOpacity
-      };
+      return { fillColor: fill, weight: 0.5, opacity: 0.6, color: "#0f172a", fillOpacity: fillOpacity };
     }
 
     function initMap() {
-      map = L.map('map', {
-        center: [13.00, 77.60],
-        zoom: 11,
-        minZoom: 9,
-        maxZoom: 16
-      });
+      map = L.map('map', { center: [13.00, 77.60], zoom: 11, minZoom: 9, maxZoom: 16 });
 
-      // Base layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
       }).addTo(map);
 
-      // Boundary outline
-      const bboxCoords = [
-        [12.85, 77.45],
-        [12.85, 77.75],
-        [13.15, 77.75],
-        [13.15, 77.45],
-        [12.85, 77.45]
-      ];
-      bboxLayer = L.polyline(bboxCoords, {
-        color: '#d97706',
-        weight: 2,
-        dashArray: '6, 6'
-      }).addTo(map);
+      const bboxCoords = [[12.85,77.45],[12.85,77.75],[13.15,77.75],[13.15,77.45],[12.85,77.45]];
+      bboxLayer = L.polyline(bboxCoords, { color: '#d97706', weight: 1.5, dashArray: '6, 5' }).addTo(map);
       bboxLayer.bindTooltip("Provisional Study BBox (Pending Authoritative Boundary)", {sticky: true});
 
-      // Synthetic SAR Extent outline (Dev only)
-      sarExtentLayer = L.rectangle([[12.85, 77.45], [13.15, 77.75]], {
-        color: '#7c3aed',
-        weight: 2,
-        dashArray: '4, 8',
-        fill: false
+      sarExtentLayer = L.rectangle([[12.85,77.45],[13.15,77.75]], {
+        color: '#7c3aed', weight: 1.5, dashArray: '4, 8', fill: false
       });
 
       incidentMarkersLayer = L.layerGroup().addTo(map);
 
-      // Custom Legend Control
       legendControl = L.control({position: 'bottomright'});
       legendControl.onAdd = function() {
         const div = L.DomUtil.create('div', 'map-legend');
@@ -1284,51 +1624,42 @@
     function updateLegend() {
       const leg = document.getElementById('dynamicLegend');
       if (!leg) return;
-
-      if (activeLayerType === "dynamic") {
-        leg.innerHTML = `
+      const legends = {
+        dynamic: `
           <div class="legend-title">Dynamic Risk Score [0, 1]</div>
-          <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> > 0.70 Critical Risk</div>
-          <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 0.55 - 0.70 High Risk</div>
-          <div class="legend-item"><div class="legend-color" style="background:#f59e0b;"></div> 0.40 - 0.55 Moderate</div>
-          <div class="legend-item"><div class="legend-color" style="background:#84cc16;"></div> 0.25 - 0.40 Elevated</div>
-          <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> < 0.25 Normal / Low</div>
-          <div style="font-size:9px; color:#64748b; margin-top:4px;">* Uncalibrated multi-criteria index.</div>
-        `;
-      } else if (activeLayerType === "static") {
-        leg.innerHTML = `
+          <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &gt; 0.70 Critical</div>
+          <div class="legend-item"><div class="legend-color" style="background:#ea580c;"></div> 0.55&ndash;0.70 High</div>
+          <div class="legend-item"><div class="legend-color" style="background:#f59e0b;"></div> 0.40&ndash;0.55 Moderate</div>
+          <div class="legend-item"><div class="legend-color" style="background:#84cc16;"></div> 0.25&ndash;0.40 Elevated</div>
+          <div class="legend-item"><div class="legend-color" style="background:#10b981;"></div> &lt; 0.25 Normal</div>
+          <div style="font-size:9px; color:#475569; margin-top:4px;">* Uncalibrated multi-criteria index</div>`,
+        static: `
           <div class="legend-title">Static Susceptibility (MCDA)</div>
-          <div class="legend-item"><div class="legend-color" style="background:#7f1d1d;"></div> > 0.70 Severe</div>
-          <div class="legend-item"><div class="legend-color" style="background:#b91c1c;"></div> 0.55 - 0.70 High</div>
-          <div class="legend-item"><div class="legend-color" style="background:#f97316;"></div> 0.40 - 0.55 Moderate</div>
-          <div class="legend-item"><div class="legend-color" style="background:#facc15;"></div> 0.25 - 0.40 Low</div>
-          <div class="legend-item"><div class="legend-color" style="background:#38bdf8;"></div> < 0.25 Minimal</div>
-        `;
-      } else if (activeLayerType === "forecast") {
-        leg.innerHTML = `
+          <div class="legend-item"><div class="legend-color" style="background:#7f1d1d;"></div> &gt; 0.70 Severe</div>
+          <div class="legend-item"><div class="legend-color" style="background:#b91c1c;"></div> 0.55&ndash;0.70 High</div>
+          <div class="legend-item"><div class="legend-color" style="background:#f97316;"></div> 0.40&ndash;0.55 Moderate</div>
+          <div class="legend-item"><div class="legend-color" style="background:#facc15;"></div> 0.25&ndash;0.40 Low</div>
+          <div class="legend-item"><div class="legend-color" style="background:#38bdf8;"></div> &lt; 0.25 Minimal</div>`,
+        forecast: `
           <div class="legend-title">24h Forecast Rain Exposure</div>
-          <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> ≥ 64.5 mm (Heavy Rain Cat.)</div>
-          <div class="legend-item"><div class="legend-color" style="background:#f97316;"></div> 35.5 - 64.4 mm (Moderate-High)</div>
-          <div class="legend-item"><div class="legend-color" style="background:#facc15;"></div> 15.6 - 35.4 mm (Moderate Rain Cat.)</div>
-          <div class="legend-item"><div class="legend-color" style="background:#22c55e;"></div> < 15.6 mm (Light Rain Cat.)</div>
-          <div style="font-size:9px; color:#64748b; margin-top:4px;">* Mapped from 9 coarse anchors. Not official warning.</div>
-        `;
-      } else if (activeLayerType === "observed") {
-        leg.innerHTML = `
-          <div class="legend-title">Observed Rain Baseline <span class="badge badge-warning" style="font-size:9px;">STALE</span></div>
+          <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> &ge; 64.5 mm (Heavy)</div>
+          <div class="legend-item"><div class="legend-color" style="background:#f97316;"></div> 35.5&ndash;64.4 mm (Mod-High)</div>
+          <div class="legend-item"><div class="legend-color" style="background:#facc15;"></div> 15.6&ndash;35.4 mm (Moderate)</div>
+          <div class="legend-item"><div class="legend-color" style="background:#22c55e;"></div> &lt; 15.6 mm (Light)</div>
+          <div style="font-size:9px; color:#475569; margin-top:4px;">* 9 coarse anchors. Not official warning.</div>`,
+        observed: `
+          <div class="legend-title">Observed Rain Baseline <span style="color:#f59e0b;">[STALE]</span></div>
           <div class="legend-item"><div class="legend-color" style="background:#1e1b4b;"></div> &gt; 120 mm Extreme</div>
-          <div class="legend-item"><div class="legend-color" style="background:#4338ca;"></div> 60 - 120 mm Heavy</div>
-          <div class="legend-item"><div class="legend-color" style="background:#6366f1;"></div> 30 - 60 mm Moderate</div>
-          <div class="legend-item"><div class="legend-color" style="background:#c7d2fe;"></div> &lt; 30 mm (Phase 4.3 constant 12.5mm)</div>
-          <div style="font-size:9px; color:#b45309; margin-top:4px;">* STALE Phase 4.3 baseline; not current live rain.</div>
-        `;
-      } else if (activeLayerType === "incidents") {
-        leg.innerHTML = `
+          <div class="legend-item"><div class="legend-color" style="background:#4338ca;"></div> 60&ndash;120 mm Heavy</div>
+          <div class="legend-item"><div class="legend-color" style="background:#6366f1;"></div> 30&ndash;60 mm Moderate</div>
+          <div class="legend-item"><div class="legend-color" style="background:#c7d2fe;"></div> &lt; 30 mm Light</div>
+          <div style="font-size:9px; color:#f59e0b; margin-top:4px;">* Phase 4.3 baseline — not live rain</div>`,
+        incidents: `
           <div class="legend-title">Legacy Flood Evidence (21 Records)</div>
-          <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> Reported Flood Incident Cell</div>
-          <div class="legend-item"><div class="legend-color" style="background:#e2e8f0;"></div> UNOBSERVED / No Report (Not Confirmed Dry)</div>
-        `;
-      }
+          <div class="legend-item"><div class="legend-color" style="background:#dc2626;"></div> Reported Flood Cell</div>
+          <div class="legend-item"><div class="legend-color" style="background:#1e293b;"></div> Unobserved / No Report</div>`
+      };
+      leg.innerHTML = legends[activeLayerType] || '';
     }
 
     function renderIncidents(incidents) {
@@ -1336,35 +1667,39 @@
       incidents.forEach(inc => {
         if (!inc.latitude || !inc.longitude) return;
         const color = getIncidentColor(inc.evidence_category);
-
         const radiusM = inc.spatial_uncertainty_m || 250;
-        const circle = L.circle([inc.latitude, inc.longitude], {
-          radius: radiusM,
-          color: color,
-          weight: 1,
-          dashArray: '3, 4',
-          fillColor: color,
-          fillOpacity: 0.15
+        L.circle([inc.latitude, inc.longitude], {
+          radius: radiusM, color: color, weight: 1, dashArray: '3, 4', fillColor: color, fillOpacity: 0.1
         }).addTo(incidentMarkersLayer);
-
         const marker = L.circleMarker([inc.latitude, inc.longitude], {
-          radius: 5,
-          color: '#ffffff',
-          weight: 1.5,
-          fillColor: color,
-          fillOpacity: 0.95
+          radius: 5, color: '#0f172a', weight: 1.5, fillColor: color, fillOpacity: 0.95
         }).addTo(incidentMarkersLayer);
-
-        marker.bindTooltip(`<b>${inc.location_name}</b><br>${inc.evidence_category}<br>Uncertainty: ±${radiusM}m`, {sticky: true});
-        marker.on('click', () => {
-          showIncidentDetails(inc);
-        });
+        marker.bindTooltip(`<b>${inc.location_name}</b><br>${inc.evidence_category}<br>Uncertainty: &plusmn;${radiusM}m`, {sticky: true});
+        marker.on('click', () => showIncidentDetails(inc));
       });
     }
 
     function fmtVal(val, unit = "", digits = 1) {
       if (val === null || val === undefined) return "UNAVAILABLE";
       return `${Number(val).toFixed(digits)}${unit}`;
+    }
+
+    function getSevClass(sev) {
+      const s = (sev || '').toUpperCase();
+      if (s === 'CRITICAL') return 'sev-critical';
+      if (s === 'HIGH') return 'sev-high';
+      if (s === 'MODERATE') return 'sev-moderate';
+      return 'sev-low';
+    }
+
+    function getStateClass(state) {
+      const s = (state || '').toUpperCase();
+      if (s === 'ACTIVE') return 'state-active';
+      if (s === 'ACKNOWLEDGED') return 'state-ack';
+      if (s === 'RESOLVED') return 'state-resolved';
+      if (s === 'EXPIRED') return 'state-expired';
+      if (s === 'WATCH') return 'state-watch';
+      return 'state-expired';
     }
 
     function inspectCell(p) {
@@ -1381,18 +1716,9 @@
 
       const level = p.research_monitoring_level || "UNAVAILABLE";
       const lvlBadge = document.getElementById('inspLevelBadge');
-      lvlBadge.innerText = level === "UNAVAILABLE" ? "UNAVAILABLE" : `${level}`;
-      if (level.includes("VERY_HIGH") || level.includes("CRITICAL")) {
-        lvlBadge.className = "badge badge-warning";
-        lvlBadge.style.background = "#fee2e2";
-        lvlBadge.style.color = "#991b1b";
-      } else if (level.includes("HIGH")) {
-        lvlBadge.className = "badge badge-warning";
-      } else {
-        lvlBadge.className = "badge badge-info";
-      }
+      lvlBadge.innerText = level;
+      lvlBadge.className = "state-badge " + (level.includes("VERY_HIGH") || level.includes("CRITICAL") ? "state-active" : level.includes("HIGH") ? "state-ack" : "state-resolved");
 
-      // Static
       document.getElementById('inspElev').innerText = fmtVal(p.elevation_mean_m, " m", 1);
       document.getElementById('inspElevStd').innerText = fmtVal(p.elevation_std_m, " m", 1);
       document.getElementById('inspBuilt').innerText = p.built_up_fraction !== null && p.built_up_fraction !== undefined ? `${(p.built_up_fraction * 100).toFixed(1)}%` : "UNAVAILABLE";
@@ -1401,14 +1727,12 @@
       document.getElementById('inspStaticScore').innerText = fmtVal(p.static_susceptibility_score, "", 4);
       document.getElementById('inspStaticRank').innerText = p.static_susceptibility_rank !== null && p.static_susceptibility_rank !== undefined ? `#${p.static_susceptibility_rank} / 1,170` : "UNAVAILABLE";
 
-      // Observed (explicit STALE contract)
       document.getElementById('inspObs24h').innerText = fmtVal(p.observed_rainfall_24h_mm, " mm", 1);
       document.getElementById('inspObsApi').innerText = fmtVal(p.observed_api_decay_mm, " mm", 1);
       document.getElementById('inspObsScore').innerText = fmtVal(p.observed_rainfall_exposure_score, "", 4);
       document.getElementById('inspObsStateBadge').innerText = p.observed_rainfall_state || "STALE";
       document.getElementById('inspObsSource').innerText = p.observed_rainfall_source || "Phase 4.3 historical baseline";
 
-      // Forecast
       document.getElementById('inspFc3h').innerText = fmtVal(p.forecast_rainfall_3h_mm, " mm", 1);
       document.getElementById('inspFc6h').innerText = fmtVal(p.forecast_rainfall_6h_mm, " mm", 1);
       document.getElementById('inspFc24h').innerText = fmtVal(p.forecast_rainfall_24h_mm, " mm", 1);
@@ -1418,23 +1742,13 @@
       const catEl = document.getElementById('inspFcCategory');
       const cat = p.forecast_intensity_category || "UNAVAILABLE";
       catEl.innerText = cat;
-      if (cat.includes("HEAVY")) {
-        catEl.style.color = "#dc2626";
-      } else if (cat.includes("MODERATE")) {
-        catEl.style.color = "#d97706";
-      } else if (cat === "UNAVAILABLE") {
-        catEl.style.color = "#64748b";
-      } else {
-        catEl.style.color = "#16a34a";
-      }
+      catEl.style.color = cat.includes("HEAVY") ? "#f87171" : cat.includes("MODERATE") ? "#fcd34d" : cat === "UNAVAILABLE" ? "#64748b" : "#34d399";
 
-      // Evidence
       document.getElementById('inspHasInc').innerText = p.has_ground_flood_evidence
         ? `Yes (${p.historical_incident_categories || "Reported"})`
         : "UNOBSERVED / No Reported Incident";
       document.getElementById('inspIncCount').innerText = p.historical_incident_count !== null && p.historical_incident_count !== undefined
-        ? `${p.historical_incident_count} reported`
-        : "UNAVAILABLE";
+        ? `${p.historical_incident_count} reported` : "UNAVAILABLE";
       document.getElementById('inspIncCat').innerText = p.historical_incident_categories || "UNOBSERVED";
 
       renderForecastTimeline(p);
@@ -1444,13 +1758,13 @@
       const el = document.getElementById('forecastBars');
       if (!el) return;
       const horizons = [
-        { label: "3-Hour Accumulation", val: p.forecast_rainfall_3h_mm, color: "#3b82f6" },
-        { label: "6-Hour Accumulation", val: p.forecast_rainfall_6h_mm, color: "#2563eb" },
-        { label: "24-Hour Horizon (Rainfall Base)", val: p.forecast_rainfall_24h_mm, color: "#d97706" },
-        { label: "72-Hour Continuous NWP Depth", val: p.forecast_rainfall_72h_mm, color: "#dc2626" },
+        { label: "3h Accumulation", val: p.forecast_rainfall_3h_mm, color: "#3b82f6" },
+        { label: "6h Accumulation", val: p.forecast_rainfall_6h_mm, color: "#2563eb" },
+        { label: "24h Horizon (Rainfall Base)", val: p.forecast_rainfall_24h_mm, color: "#d97706" },
+        { label: "72h Continuous NWP Depth", val: p.forecast_rainfall_72h_mm, color: "#dc2626" },
       ];
       if (horizons.every(h => h.val === null || h.val === undefined)) {
-        el.innerHTML = `<div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; font-size:12px; color:#64748b;">DATA_STATE: UNAVAILABLE — No forecast horizon values present for this cell.</div>`;
+        el.innerHTML = `<div style="padding:10px; background:var(--bg-surface-secondary); border:1px solid var(--border-color); border-radius:4px; font-size:11px; color:var(--text-muted);">DATA_STATE: UNAVAILABLE</div>`;
         return;
       }
       const maxVal = Math.max(...horizons.map(h => h.val || 0), 120);
@@ -1459,25 +1773,36 @@
         const pct = isNull ? 0 : (h.val / maxVal) * 100;
         const txt = isNull ? "UNAVAILABLE" : `${Number(h.val).toFixed(1)} mm`;
         return `
-          <div style="margin-bottom: 12px;">
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
-              <span>${h.label}</span><strong>${txt}</strong>
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+              <span style="color:var(--text-muted);">${h.label}</span>
+              <strong style="color:var(--text-main);">${txt}</strong>
             </div>
-            <div class="progress-bar-bg"><div style="height:100%; background:${h.color}; width:${pct}%;"></div></div>
-          </div>
-        `;
+            <div class="progress-bar-bg"><div style="height:100%; background:${h.color}; width:${pct}%; border-radius:3px; transition:width 0.4s ease;"></div></div>
+          </div>`;
       }).join("");
     }
 
     function showIncidentDetails(inc) {
-      alert(`INCIDENT: ${inc.location_name}\nCategory: ${inc.evidence_category}\nConfidence: ${inc.evidence_confidence}\nDate: ${inc.event_date}\nSource: ${inc.source_organisation}\nUncertainty: ±${inc.spatial_uncertainty_m}m\nDescription: ${inc.event_description}`);
+      alert(`INCIDENT: ${inc.location_name}\nCategory: ${inc.evidence_category}\nConfidence: ${inc.evidence_confidence}\nDate: ${inc.event_date}\nSource: ${inc.source_organisation}\nUncertainty: \u00b1${inc.spatial_uncertainty_m}m\nDescription: ${inc.event_description}`);
     }
 
     function showApiError(msg) {
       const b = document.getElementById('apiErrorBanner');
-      if (b) {
-        b.style.display = 'block';
-        b.innerText = `API_ERROR: ${msg}`;
+      if (b) { b.style.display = 'block'; b.innerText = `API_ERROR: ${msg}`; }
+    }
+
+    function updateHeaderStatus(isOk) {
+      const dot = document.getElementById('headerPulseDot');
+      const txt = document.getElementById('headerStatusText');
+      if (isOk) {
+        dot.className = 'pulse-dot';
+        txt.textContent = 'Live Data Connected';
+        txt.style.color = '#34d399';
+      } else {
+        dot.className = 'pulse-dot danger';
+        txt.textContent = 'API Unavailable';
+        txt.style.color = '#f87171';
       }
     }
 
@@ -1486,8 +1811,10 @@
         const sumRes = await fetch('/api/summary');
         if (!sumRes.ok) throw new Error(`/api/summary returned HTTP ${sumRes.status}`);
         const summary = await sumRes.json();
+        updateHeaderStatus(true);
+
         if (summary.study_area) {
-          document.getElementById('kpiTotalCells').innerText = `${(summary.study_area.total_cells || 0).toLocaleString()} km²`;
+          document.getElementById('kpiTotalCells').innerText = `${(summary.study_area.total_cells || 0).toLocaleString()} km\u00b2`;
         }
         if (summary.forecast_surveillance) {
           const fs = summary.forecast_surveillance;
@@ -1495,13 +1822,13 @@
           const modCount = fs.active_moderate_rainfall_category_count ?? 0;
           const lightCount = fs.light_rainfall_category_count ?? 0;
           document.getElementById('alertSummary').innerText =
-            `ECMWF/GFS 72h Continuous Run (9 Regional Anchors): ${heavyCount} Cells Heavy Rain (≥64.5mm), Peak 24h Rain: ${fs.peak_24h_rainfall_mm !== null ? fs.peak_24h_rainfall_mm.toFixed(1) : 'UNAVAILABLE'}mm | Observed Baseline: STALE (Phase 4.3 constant 12.5mm)`;
-          document.getElementById('alertStatsHeavy').innerText = `● ${heavyCount} Heavy Rain Category`;
-          document.getElementById('alertStatsMod').innerText = `● ${modCount} Moderate Rain Category`;
-          document.getElementById('alertStatsLight').innerText = `● ${lightCount} Light Rain Category`;
+            `ECMWF/GFS 72h Continuous Run (9 Regional Anchors): ${heavyCount} Cells Heavy Rain (\u226564.5mm), Peak 24h: ${fs.peak_24h_rainfall_mm !== null ? fs.peak_24h_rainfall_mm.toFixed(1) : 'UNAVAILABLE'}mm | Observed Baseline: STALE (Phase 4.3)`;
+          document.getElementById('alertStatsHeavy').innerText = `${heavyCount} Heavy`;
+          document.getElementById('alertStatsMod').innerText = `${modCount} Moderate`;
+          document.getElementById('alertStatsLight').innerText = `${lightCount} Light`;
           document.getElementById('kpiHeavyRain').innerText = `${heavyCount} Cells`;
           document.getElementById('kpiMax24h').innerText = fs.peak_24h_rainfall_mm !== null ? `${fs.peak_24h_rainfall_mm.toFixed(2)} mm` : "UNAVAILABLE";
-          document.getElementById('kpiMax24hNote').innerText = `Snapshot Ref: ${fs.nominal_reference_time_utc || 'UNAVAILABLE'}`;
+          document.getElementById('kpiMax24hNote').innerText = `Ref: ${fs.nominal_reference_time_utc || 'UNAVAILABLE'}`;
         }
         if (summary.historical_surveillance) {
           const hs = summary.historical_surveillance;
@@ -1520,22 +1847,13 @@
           onEachFeature: function(feature, layer) {
             const p = feature.properties;
             layer.on({
-              mouseover: function(e) {
-                const l = e.target;
-                l.setStyle({weight: 2, color: '#000000'});
-                l.bringToFront();
-              },
-              mouseout: function(e) {
-                gridLayer.resetStyle(e.target);
-              },
-              click: function(e) {
-                inspectCell(p);
-              }
+              mouseover: function(e) { const l = e.target; l.setStyle({weight: 1.5, color: '#60a5fa'}); l.bringToFront(); },
+              mouseout: function(e) { gridLayer.resetStyle(e.target); },
+              click: function() { inspectCell(p); }
             });
             const scoreStr = p.dynamic_risk_prioritization_score !== null && p.dynamic_risk_prioritization_score !== undefined
-              ? p.dynamic_risk_prioritization_score.toFixed(3)
-              : "UNAVAILABLE";
-            layer.bindTooltip(`<b>${p.grid_id}</b><br>Priority: ${scoreStr}<br>Click to inspect`, {sticky: true});
+              ? p.dynamic_risk_prioritization_score.toFixed(3) : "UNAVAILABLE";
+            layer.bindTooltip(`<b>${p.grid_id}</b><br>Priority: ${scoreStr}<br><span style="color:#94a3b8;font-size:10px;">Click to inspect</span>`, {sticky: true});
           }
         }).addTo(map);
 
@@ -1553,20 +1871,18 @@
         incListEl.innerHTML = '';
         incidentsData.forEach(inc => {
           const item = document.createElement('div');
-          item.style = "padding:8px; border:1px solid #e2e8f0; border-radius:4px; font-size:12px; cursor:pointer;";
+          item.style.cssText = "padding:8px 10px; border:1px solid var(--border-subtle); border-radius:4px; cursor:pointer; transition:border-color 0.15s;";
+          item.onmouseenter = () => item.style.borderColor = 'var(--primary)';
+          item.onmouseleave = () => item.style.borderColor = 'var(--border-subtle)';
           item.innerHTML = `
-            <div style="font-weight:600; display:flex; justify-content:space-between;">
-              <span>${inc.location_name}</span>
-              <span style="color:${getIncidentColor(inc.evidence_category)}; font-size:11px;">${inc.evidence_category}</span>
+            <div style="font-weight:600; display:flex; justify-content:space-between; gap:8px;">
+              <span style="font-size:12px;">${inc.location_name}</span>
+              <span style="color:${getIncidentColor(inc.evidence_category)}; font-size:10px; white-space:nowrap;">${inc.evidence_category}</span>
             </div>
-            <div style="color:#64748b; font-size:11px; margin-top:2px;">
-              Date: ${inc.event_date} | Uncertainty: ±${inc.spatial_uncertainty_m}m
-            </div>
-          `;
-          item.onclick = () => {
-            map.flyTo([inc.latitude, inc.longitude], 14);
-            showIncidentDetails(inc);
-          };
+            <div style="color:var(--text-muted); font-size:10px; margin-top:2px;">
+              ${inc.event_date} &nbsp;&bull;&nbsp; &plusmn;${inc.spatial_uncertainty_m}m uncertainty
+            </div>`;
+          item.onclick = () => { map.flyTo([inc.latitude, inc.longitude], 14); showIncidentDetails(inc); };
           incListEl.appendChild(item);
         });
 
@@ -1578,16 +1894,15 @@
           const tr = document.createElement('tr');
           const isWatch = ep.lifecycle_state === "WATCH";
           tr.innerHTML = `
-            <td style="font-family:var(--font-mono); font-weight:600;">${ep.episode_id}</td>
+            <td style="font-family:var(--font-mono); font-weight:600; color:#93c5fd;">${ep.episode_id}</td>
             <td><strong>${ep.episode_name}</strong></td>
-            <td>${ep.start_date} to ${ep.end_date}</td>
-            <td>${ep.peak_date || "N/A"}</td>
-            <td>${ep.peak_domain_rainfall_mm !== null ? ep.peak_domain_rainfall_mm.toFixed(1) : "N/A"}</td>
-            <td>${ep.cumulative_domain_rainfall_mm !== null ? ep.cumulative_domain_rainfall_mm.toFixed(1) : "N/A"}</td>
+            <td style="font-family:var(--font-mono); font-size:10px;">${ep.start_date} &rarr; ${ep.end_date}</td>
+            <td>${ep.peak_date || "&ndash;"}</td>
+            <td>${ep.peak_domain_rainfall_mm !== null ? ep.peak_domain_rainfall_mm.toFixed(1) : "&ndash;"}</td>
+            <td>${ep.cumulative_domain_rainfall_mm !== null ? ep.cumulative_domain_rainfall_mm.toFixed(1) : "&ndash;"}</td>
             <td>${ep.reported_incidents_count}</td>
-            <td><span class="badge ${isWatch ? 'badge-warning' : 'badge-info'}">${ep.lifecycle_state}</span></td>
-            <td>${ep.hazard_classification}</td>
-          `;
+            <td><span class="state-badge ${isWatch ? 'state-watch' : 'state-resolved'}">${ep.lifecycle_state}</span></td>
+            <td style="font-size:10px; color:var(--text-muted);">${ep.hazard_classification}</td>`;
           epTbody.appendChild(tr);
         });
 
@@ -1598,16 +1913,15 @@
         (manData.datasets || []).forEach(ds => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td style="font-family:var(--font-mono); font-weight:600;">${ds.dataset_id}</td>
+            <td style="font-family:var(--font-mono); font-weight:600; color:#93c5fd;">${ds.dataset_id}</td>
             <td>${ds.provider}</td>
             <td>${(ds.file_size_bytes / 1024).toFixed(1)} KB</td>
-            <td style="font-family:var(--font-mono); font-size:11px;" title="${ds.sha256}">${ds.sha256 ? ds.sha256.substring(0, 16) + '...' : 'N/A'}</td>
-            <td><span class="badge badge-success">VALID (100% Match)</span></td>
-          `;
+            <td style="font-family:var(--font-mono); font-size:10px;" title="${ds.sha256}">${ds.sha256 ? ds.sha256.substring(0, 16) + '...' : 'N/A'}</td>
+            <td><span class="state-badge state-resolved">VALID</span></td>`;
           manTbody.appendChild(tr);
         });
 
-        // Load Phase 5 Datasets
+        // Phase 5
         try {
           const gatesRes = await fetch('/api/phase5/readiness-gates');
           if (gatesRes.ok) {
@@ -1616,12 +1930,8 @@
               document.getElementById('gateABadge').innerText = gates.phase5_2_scientific_reconciliation.gate_a_reconciled_status.replace(/_/g, ' ');
               document.getElementById('gateBBadge').innerText = gates.phase5_2_scientific_reconciliation.gate_b_reconciled_status.replace(/_/g, ' ');
             } else {
-              if (gates.gate_a) {
-                document.getElementById('gateABadge').innerText = gates.gate_a.status.replace(/_/g, ' ');
-              }
-              if (gates.gate_b) {
-                document.getElementById('gateBBadge').innerText = gates.gate_b.status.replace(/_/g, ' ');
-              }
+              if (gates.gate_a) document.getElementById('gateABadge').innerText = gates.gate_a.status.replace(/_/g, ' ');
+              if (gates.gate_b) document.getElementById('gateBBadge').innerText = gates.gate_b.status.replace(/_/g, ' ');
             }
           }
 
@@ -1632,7 +1942,8 @@
             p5mTbody.innerHTML = '';
             p5m.forEach(r => {
               const tr = document.createElement('tr');
-              const hssStyle = (r.heidke_skill_score < 0) ? 'color:#dc2626; font-weight:600;' : (r.heidke_skill_score > 0.25 ? 'color:#16a34a; font-weight:600;' : '');
+              const hssGood = r.heidke_skill_score > 0.25;
+              const hssBad = r.heidke_skill_score < 0;
               tr.innerHTML = `
                 <td style="font-weight:600;">${r.lead_time_hours}h</td>
                 <td>${r.accumulation_hours}h</td>
@@ -1644,8 +1955,7 @@
                 <td>${r.pod !== null ? r.pod.toFixed(3) : 'N/A'}</td>
                 <td>${r.far !== null ? r.far.toFixed(3) : 'N/A'}</td>
                 <td>${r.csi !== null ? r.csi.toFixed(4) : 'N/A'}</td>
-                <td style="${hssStyle}">${r.heidke_skill_score !== null ? r.heidke_skill_score.toFixed(4) : 'N/A'}</td>
-              `;
+                <td style="color:${hssBad ? '#f87171' : hssGood ? '#34d399' : 'inherit'}; font-weight:600;">${r.heidke_skill_score !== null ? r.heidke_skill_score.toFixed(4) : 'N/A'}</td>`;
               p5mTbody.appendChild(tr);
             });
           }
@@ -1655,10 +1965,9 @@
             const fval = await fvalRes.json();
             const taxTbody = document.getElementById('phase5TaxonomyTbody');
             taxTbody.innerHTML = '';
-            const cdist = fval.class_distribution || {};
             const totalCells = fval.total_cells || 1170;
             const descMap = {
-              "UNOBSERVED": "No municipal sensors or reports (Excluded from false-alarm)",
+              "UNOBSERVED": "No municipal sensors or reports (excluded from false-alarm)",
               "CONFIRMED_INUNDATION": "Measured standing water >0.15m / verified photos",
               "REPORTED_WATERLOGGING": "BBMP / KSNDMC control room de-watering pump logs",
               "MONITORED_NO_INUNDATION": "Active field telemetry / high-ground campuses confirmed dry",
@@ -1666,15 +1975,13 @@
               "RAINFALL_ONLY": "Rain >64.5mm but drainage prevented inundation",
               "UNCERTAIN": "Unverified social reports (Purged)"
             };
-            for (const [cls, cnt] of Object.entries(cdist)) {
+            for (const [cls, cnt] of Object.entries(fval.class_distribution || {})) {
               const tr = document.createElement('tr');
-              const pct = (cnt / totalCells * 100).toFixed(2);
               tr.innerHTML = `
-                <td><strong>${cls}</strong></td>
+                <td><strong style="font-family:var(--font-mono); font-size:10px;">${cls}</strong></td>
                 <td style="font-family:var(--font-mono);">${cnt}</td>
-                <td>${pct}%</td>
-                <td style="font-size:11px; color:#64748b;">${descMap[cls] || 'Standard observation'}</td>
-              `;
+                <td>${(cnt / totalCells * 100).toFixed(2)}%</td>
+                <td style="font-size:10px; color:var(--text-muted);">${descMap[cls] || 'Standard observation'}</td>`;
               taxTbody.appendChild(tr);
             }
 
@@ -1684,12 +1991,11 @@
               const tr = document.createElement('tr');
               tr.innerHTML = `
                 <td><strong>${em.indicator_name}</strong></td>
-                <td style="font-size:11px;">${em.evaluation_scope}</td>
+                <td style="font-size:10px;">${em.evaluation_scope}</td>
                 <td>${em.mean_score_inundated !== null ? em.mean_score_inundated.toFixed(3) : 'N/A'}</td>
                 <td>${em.mean_score_monitored_dry !== null ? em.mean_score_monitored_dry.toFixed(3) : 'N/A'}</td>
-                <td style="font-weight:700; color:#16a34a;">${em.roc_auc !== null ? em.roc_auc.toFixed(3) : 'N/A'}</td>
-                <td style="font-weight:700; color:#0284c7;">${em.pr_auc !== null ? em.pr_auc.toFixed(3) : 'N/A'}</td>
-              `;
+                <td style="font-weight:700; color:#34d399;">${em.roc_auc !== null ? em.roc_auc.toFixed(3) : 'N/A'}</td>
+                <td style="font-weight:700; color:#60a5fa;">${em.pr_auc !== null ? em.pr_auc.toFixed(3) : 'N/A'}</td>`;
               evalTbody.appendChild(tr);
             });
           }
@@ -1702,13 +2008,12 @@
             sarScenes.forEach(s => {
               const tr = document.createElement('tr');
               tr.innerHTML = `
-                <td style="font-family:var(--font-mono); font-size:11px;">${s.scene_id}</td>
+                <td style="font-family:var(--font-mono); font-size:10px;">${s.scene_id}</td>
                 <td>${s.acquisition_time_utc}</td>
-                <td><span class="badge badge-info">${s.role}</span></td>
+                <td><span class="chip chip-info">${s.role}</span></td>
                 <td>Relative Orbit ${s.relative_orbit} (${s.flight_direction})</td>
                 <td>${s.polarisation}</td>
-                <td><span class="badge badge-success">${s.cdse_access_status}</span></td>
-              `;
+                <td><span class="chip chip-success">${s.cdse_access_status}</span></td>`;
               sarTbody.appendChild(tr);
             });
           }
@@ -1716,249 +2021,239 @@
           console.warn("Phase 5 endpoints not fully loaded:", p5err);
         }
 
-          // Load Phase 6 & Phase 7 Deliverables
-          try {
-            const [p6sumRes, p6nwpRes, p6regRes, p6gtRes, p6sarRes, p6hydRes, p6manRes, p7sumRes, p7uncRes, p7manRes] = await Promise.all([
-              fetch('/api/phase6/summary'),
-              fetch('/api/phase6/nwp'),
-              fetch('/api/phase6/ground-rainfall'),
-              fetch('/api/phase6/flood-evidence'),
-              fetch('/api/phase6/sar'),
-              fetch('/api/phase6/hydrology'),
-              fetch('/api/phase6/manifest'),
-              fetch('/api/phase7/summary'),
-              fetch('/api/phase7/uncertainty'),
-              fetch('/api/phase7/manifest')
-            ]);
+        // Phase 6 & 7
+        try {
+          const [p6sumRes, p6nwpRes, p6regRes, p6gtRes, p6sarRes, p6hydRes, p6manRes, p7sumRes, p7uncRes, p7manRes] = await Promise.all([
+            fetch('/api/phase6/summary'),
+            fetch('/api/phase6/nwp'),
+            fetch('/api/phase6/ground-rainfall'),
+            fetch('/api/phase6/flood-evidence'),
+            fetch('/api/phase6/sar'),
+            fetch('/api/phase6/hydrology'),
+            fetch('/api/phase6/manifest'),
+            fetch('/api/phase7/summary'),
+            fetch('/api/phase7/uncertainty'),
+            fetch('/api/phase7/manifest')
+          ]);
 
-            if (p6nwpRes.ok) {
-              const p6nwp = await p6nwpRes.json();
-              document.getElementById('p6NwpVal').innerText = `${p6nwp.total_grib2_slices ?? '--'} Slices / ${p6nwp.total_wmo_messages_decoded ?? '--'} Msgs`;
-              document.getElementById('p6NwpDesc').innerText = `${p6nwp.source || 'NOAA GFS'} (${p6nwp.native_resolution_km ?? '--'} km). ${(p6nwp.total_cell_forecast_records || 0).toLocaleString()} records.`;
+          if (p6nwpRes.ok) {
+            const p6nwp = await p6nwpRes.json();
+            document.getElementById('p6NwpVal').innerText = `${p6nwp.total_grib2_slices ?? '--'} Slices / ${p6nwp.total_wmo_messages_decoded ?? '--'} Msgs`;
+            document.getElementById('p6NwpDesc').innerText = `${p6nwp.source || 'NOAA GFS'} (${p6nwp.native_resolution_km ?? '--'} km). ${(p6nwp.total_cell_forecast_records || 0).toLocaleString()} records.`;
+          }
+          if (p6regRes.ok) {
+            const p6reg = await p6regRes.json();
+            const podHeavy = p6reg.contingency_heavy_rain_ge_64_5mm ? p6reg.contingency_heavy_rain_ge_64_5mm.pod : 'N/A';
+            document.getElementById('p6RainVal').innerText = `${p6reg.total_stations_catalogued ?? '--'} Stations / ${p6reg.paired_validation_samples ?? '--'} Pairs`;
+            document.getElementById('p6RainDesc').innerText = `MAE = ${p6reg.gfs_vs_gauge_mae_mm ?? '--'} mm, r = ${p6reg.gfs_vs_gauge_pearson_r ?? '--'}, Heavy-Rain POD = ${podHeavy}`;
+            const stTbody = document.getElementById('phase6StationsTbody');
+            if (stTbody) {
+              stTbody.innerHTML = '';
+              (p6reg.stations || []).forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td style="font-family:var(--font-mono); font-size:10px;">${s.station_id}</td>
+                  <td><strong>${s.station_name}</strong></td>
+                  <td><span class="chip ${s.network.includes('IMD') ? 'chip-info' : 'chip-purple'}">${s.network}</span></td>
+                  <td>${s.elevation_m} m</td>
+                  <td style="font-size:10px;">${s.topographic_position}</td>
+                  <td style="font-size:10px;">${s.sensor_type}</td>
+                  <td>${s.is_primary_hydrological_gauge ? '<span style="color:#34d399; font-weight:600;">Primary</span>' : '<span style="color:var(--text-muted);">Air Quality</span>'}</td>`;
+                stTbody.appendChild(tr);
+              });
             }
-            if (p6regRes.ok) {
-              const p6reg = await p6regRes.json();
-              const podHeavy = p6reg.contingency_heavy_rain_ge_64_5mm ? p6reg.contingency_heavy_rain_ge_64_5mm.pod : 'N/A';
-              document.getElementById('p6RainVal').innerText = `${p6reg.total_stations_catalogued ?? '--'} Stations / ${p6reg.paired_validation_samples ?? '--'} Pairs`;
-              document.getElementById('p6RainDesc').innerText = `MAE = ${p6reg.gfs_vs_gauge_mae_mm ?? '--'} mm, r = ${p6reg.gfs_vs_gauge_pearson_r ?? '--'}, Heavy-Rain POD = ${podHeavy} (0 hits).`;
-              const stTbody = document.getElementById('phase6StationsTbody');
-              if (stTbody) {
-                stTbody.innerHTML = '';
-                (p6reg.stations || []).forEach(s => {
+          }
+          if (p6gtRes.ok) {
+            const p6gt = await p6gtRes.json();
+            document.getElementById('p6GtVal').innerText = `ML Gate: ${p6gt.supervised_ml_flood_prediction_gate || 'BLOCKED'}`;
+            document.getElementById('p6GtDesc').innerText = `${p6gt.unobserved_percentage ?? '--'}% unobserved (${p6gt.unobserved_domain_cells ?? '--'} cells). ${p6gt.verified_positive_inundation_cells ?? '--'} pos, ${p6gt.verified_monitored_negative_cells ?? '--'} neg proxy.`;
+            document.getElementById('p6IncCountLabel').innerText = p6gt.incident_record_count ?? (p6gt.incident_records || []).length;
+            const gtTbody = document.getElementById('phase6GroundTruthTbody');
+            if (gtTbody) {
+              const recs = p6gt.incident_records || [];
+              if (recs.length === 0) {
+                gtTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">UNAVAILABLE — No Phase 6 incident records returned.</td></tr>`;
+              } else {
+                gtTbody.innerHTML = '';
+                recs.forEach(r => {
                   const tr = document.createElement('tr');
+                  const depth = (r.water_depth_min_m !== null && r.water_depth_max_m !== null) ? `${r.water_depth_min_m}&ndash;${r.water_depth_max_m} m` : 'UNAVAILABLE';
                   tr.innerHTML = `
-                    <td style="font-family:var(--font-mono); font-size:11px;">${s.station_id}</td>
-                    <td><strong>${s.station_name}</strong></td>
-                    <td><span class="badge ${s.network.includes('IMD') ? 'badge-info' : 'badge-purple'}">${s.network}</span></td>
-                    <td>${s.elevation_m} m</td>
-                    <td>${s.topographic_position}</td>
-                    <td style="font-size:11px;">${s.sensor_type}</td>
-                    <td>${s.is_primary_hydrological_gauge ? '<span style="color:#16a34a; font-weight:600;">Primary Hydrological</span>' : '<span style="color:#64748b;">Air Quality Audit</span>'}</td>
-                  `;
-                  stTbody.appendChild(tr);
+                    <td style="font-family:var(--font-mono); font-size:10px;">${r.event_date || 'UNAVAILABLE'}</td>
+                    <td><strong>${r.location_name || 'UNAVAILABLE'}</strong></td>
+                    <td><span class="chip chip-danger">${r.evidence_class || 'UNAVAILABLE'}</span></td>
+                    <td>${depth}</td>
+                    <td style="font-size:10px; color:var(--text-muted);">${r.source_type || 'UNAVAILABLE'}</td>`;
+                  gtTbody.appendChild(tr);
                 });
               }
             }
-            if (p6gtRes.ok) {
-              const p6gt = await p6gtRes.json();
-              document.getElementById('p6GtVal').innerText = `ML Gate: ${p6gt.supervised_ml_flood_prediction_gate || 'BLOCKED'}`;
-              document.getElementById('p6GtDesc').innerText = `${p6gt.unobserved_percentage ?? '--'}% unobserved (${p6gt.unobserved_domain_cells ?? '--'} cells). ${p6gt.verified_positive_inundation_cells ?? '--'} pos, ${p6gt.verified_monitored_negative_cells ?? '--'} neg proxy.`;
-              document.getElementById('p6IncCountLabel').innerText = p6gt.incident_record_count ?? (p6gt.incident_records || []).length;
-              const gtTbody = document.getElementById('phase6GroundTruthTbody');
-              if (gtTbody) {
-                const recs = p6gt.incident_records || [];
-                if (recs.length === 0) {
-                  gtTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b;">UNAVAILABLE — No Phase 6 incident records returned by /api/phase6/flood-evidence.</td></tr>`;
-                } else {
-                  gtTbody.innerHTML = '';
-                  recs.forEach(r => {
-                    const tr = document.createElement('tr');
-                    const depth = (r.water_depth_min_m !== null && r.water_depth_max_m !== null)
-                      ? `${r.water_depth_min_m} - ${r.water_depth_max_m} m`
-                      : 'UNAVAILABLE';
-                    tr.innerHTML = `
-                      <td style="font-family:var(--font-mono); font-size:11px;">${r.event_date || 'UNAVAILABLE'}</td>
-                      <td><strong>${r.location_name || 'UNAVAILABLE'}</strong></td>
-                      <td><span class="badge" style="background:#fee2e2; color:#b91c1c;">${r.evidence_class || 'UNAVAILABLE'}</span></td>
-                      <td>${depth}</td>
-                      <td style="font-size:11px; color:#475569;">${r.source_type || 'UNAVAILABLE'}</td>
-                    `;
-                    gtTbody.appendChild(tr);
-                  });
-                }
+          } else {
+            const gtTbody = document.getElementById('phase6GroundTruthTbody');
+            if (gtTbody) gtTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#f87171;">Error loading /api/phase6/flood-evidence (HTTP ${p6gtRes.status})</td></tr>`;
+          }
+          if (p6sarRes.ok) {
+            const p6sar = await p6sarRes.json();
+            document.getElementById('p6SarVal').innerText = `${p6sar.true_specular_detections ?? '--'}/${p6sar.verified_positive_total ?? '--'} True Specular (${p6sar.true_specular_sensitivity_pct ?? '--'}%)`;
+            document.getElementById('p6SarDesc').innerText = `Exploratory (${p6sar.sar_metric_status || 'UNVALIDATED'}): ${p6sar.lake_conflated_count ?? '--'} lake-conflated, ${p6sar.urban_canyon_missed_count ?? '--'} canyon-missed; dry specificity ${p6sar.specificity_on_monitored_dry_pct ?? '--'}%.`;
+          }
+          if (p6hydRes.ok) {
+            const p6hyd = await p6hydRes.json();
+            document.getElementById('p6HydroVal').innerText = `${p6hyd.topographic_sinks_identified ?? '--'} Topographic Sinks`;
+            document.getElementById('p6HydroDesc').innerText = `TWI [${(p6hyd.twi_range || []).join(' - ')}], ROC-AUC = ${p6hyd.deterministic_ground_truth_roc_auc ?? '--'}.`;
+          }
+          if (p7sumRes.ok && p7uncRes.ok) {
+            const p7sum = await p7sumRes.json();
+            const p7unc = await p7uncRes.json();
+            document.getElementById('p7UncertVal').innerText = `${p7unc.total_pairs ?? '--'} Pairs / ${p7unc.unique_date_clusters ?? '--'} Dates`;
+            document.getElementById('p7UncertDesc').innerText = `${p7sum.final_acceptance_decision || 'PHASE_7'} (${p7unc.bootstrap_iterations ?? '--'} bootstrap iters).`;
+          }
+          if (p6manRes.ok) {
+            const p6man = await p6manRes.json();
+            const manTbody = document.getElementById('phase6ManifestTbody');
+            if (manTbody) {
+              manTbody.innerHTML = '';
+              for (const [did, dinfo] of Object.entries(p6man.datasets || {})) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td style="font-family:var(--font-mono); font-size:10px; font-weight:600; color:#93c5fd;">${did}</td>
+                  <td><span class="chip chip-info">${dinfo.stage || 'phase6'}</span></td>
+                  <td>${(dinfo.file_size_bytes / 1024).toFixed(1)} KB</td>
+                  <td style="font-family:var(--font-mono); font-size:10px;">${dinfo.sha256_checksum.slice(0, 16)}...</td>
+                  <td style="font-size:10px; color:var(--text-muted);">${dinfo.description}</td>`;
+                manTbody.appendChild(tr);
               }
+            }
+          }
+          if (p7manRes.ok) {
+            const p7man = await p7manRes.json();
+            document.getElementById('p7ManCountLabel').innerText = p7man.total_datasets_registered ?? Object.keys(p7man.datasets || {}).length;
+            const p7Tbody = document.getElementById('phase7ManifestTbody');
+            if (p7Tbody) {
+              p7Tbody.innerHTML = '';
+              for (const [did, dinfo] of Object.entries(p7man.datasets || {})) {
+                const tr = document.createElement('tr');
+                const sz = dinfo.file_size_bytes ? `${(dinfo.file_size_bytes / 1024).toFixed(1)} KB` : 'UNAVAILABLE';
+                const sha = dinfo.sha256_checksum ? `${dinfo.sha256_checksum.slice(0, 16)}...` : 'UNAVAILABLE';
+                tr.innerHTML = `
+                  <td style="font-family:var(--font-mono); font-size:10px; font-weight:600; color:#93c5fd;">${did}</td>
+                  <td><span class="chip chip-info">${dinfo.stage || dinfo.phase || 'phase7'}</span></td>
+                  <td>${sz}</td>
+                  <td style="font-family:var(--font-mono); font-size:10px;">${sha}</td>
+                  <td style="font-size:10px; color:var(--text-muted);">${dinfo.file_path || 'UNAVAILABLE'}</td>`;
+                p7Tbody.appendChild(tr);
+              }
+            }
+          }
+        } catch (p6err) {
+          console.warn("Phase 6/7 endpoints loading error:", p6err);
+          showApiError(`Phase 6/7 endpoint error: ${p6err.message}`);
+        }
+
+        // Live Weather
+        try {
+          const [wfRes, wcRes, srcRes] = await Promise.all([
+            fetch('/api/weather/forecast'),
+            fetch('/api/weather/current'),
+            fetch('/api/sources')
+          ]);
+          if (wfRes.ok) {
+            const wf = await wfRes.json();
+            document.getElementById('liveFcstProvider').innerText = wf.provider || 'UNAVAILABLE';
+            document.getElementById('liveFcstModel').innerText = wf.model || 'UNAVAILABLE';
+            const freshEl = document.getElementById('liveFcstFreshness');
+            const fresh = wf.freshness || wf.status || 'UNAVAILABLE';
+            freshEl.innerText = fresh;
+            freshEl.className = 'chip ' + (fresh === 'LIVE' || fresh === 'RECENT' ? 'chip-success' : fresh === 'STALE' ? 'chip-warning' : 'chip-muted');
+            if (wf.retrieval_time_utc) {
+              const istStr = new Date(wf.retrieval_time_utc).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+              document.getElementById('liveFcstUpdated').innerText = `${wf.retrieval_time_utc} (${istStr} IST)`;
             } else {
-              const gtTbody = document.getElementById('phase6GroundTruthTbody');
-              if (gtTbody) gtTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#dc2626;">ERROR loading /api/phase6/flood-evidence (HTTP ${p6gtRes.status})</td></tr>`;
+              document.getElementById('liveFcstUpdated').innerText = 'UNAVAILABLE';
             }
-            if (p6sarRes.ok) {
-              const p6sar = await p6sarRes.json();
-              const specDet = p6sar.true_specular_detections ?? '--';
-              const posTot = p6sar.verified_positive_total ?? '--';
-              const specPct = p6sar.true_specular_sensitivity_pct ?? '--';
-              document.getElementById('p6SarVal').innerText = `${specDet}/${posTot} True Specular (${specPct}%)`;
-              document.getElementById('p6SarDesc').innerText = `Exploratory (${p6sar.sar_metric_status || 'UNVALIDATED'}): ${p6sar.lake_conflated_count ?? '--'} lake-conflated, ${p6sar.urban_canyon_missed_count ?? '--'} canyon-missed; dry specificity ${p6sar.specificity_on_monitored_dry_pct ?? '--'}%.`;
-            }
-            if (p6hydRes.ok) {
-              const p6hyd = await p6hydRes.json();
-              document.getElementById('p6HydroVal').innerText = `${p6hyd.topographic_sinks_identified ?? '--'} Topographic Sinks`;
-              document.getElementById('p6HydroDesc').innerText = `TWI [${(p6hyd.twi_range || []).join(' - ')}], ROC-AUC = ${p6hyd.deterministic_ground_truth_roc_auc ?? '--'}.`;
-            }
-            if (p7sumRes.ok && p7uncRes.ok) {
-              const p7sum = await p7sumRes.json();
-              const p7unc = await p7uncRes.json();
-              document.getElementById('p7UncertVal').innerText = `${p7unc.total_pairs ?? '--'} Pairs / ${p7unc.unique_date_clusters ?? '--'} Dates`;
-              document.getElementById('p7UncertDesc').innerText = `${p7sum.final_acceptance_decision || 'PHASE_7'} (${p7unc.bootstrap_iterations ?? '--'} bootstrap iters).`;
-            }
-            if (p6manRes.ok) {
-              const p6man = await p6manRes.json();
-              const manTbody = document.getElementById('phase6ManifestTbody');
-              if (manTbody) {
-                manTbody.innerHTML = '';
-                const datasets = p6man.datasets || {};
-                for (const [did, dinfo] of Object.entries(datasets)) {
-                  const tr = document.createElement('tr');
-                  tr.innerHTML = `
-                    <td style="font-family:var(--font-mono); font-size:11px; font-weight:600;">${did}</td>
-                    <td><span class="badge badge-info">${dinfo.stage || 'phase6'}</span></td>
-                    <td>${(dinfo.file_size_bytes / 1024).toFixed(1)} KB</td>
-                    <td style="font-family:var(--font-mono); font-size:10px;">${dinfo.sha256_checksum.slice(0, 16)}...</td>
-                    <td style="font-size:11px; color:#475569;">${dinfo.description}</td>
-                  `;
-                  manTbody.appendChild(tr);
-                }
-              }
-            }
-            if (p7manRes.ok) {
-              const p7man = await p7manRes.json();
-              document.getElementById('p7ManCountLabel').innerText = p7man.total_datasets_registered ?? Object.keys(p7man.datasets || {}).length;
-              const p7Tbody = document.getElementById('phase7ManifestTbody');
-              if (p7Tbody) {
-                p7Tbody.innerHTML = '';
-                const datasets = p7man.datasets || {};
-                for (const [did, dinfo] of Object.entries(datasets)) {
-                  const tr = document.createElement('tr');
-                  const sz = dinfo.file_size_bytes ? `${(dinfo.file_size_bytes / 1024).toFixed(1)} KB` : 'UNAVAILABLE';
-                  const sha = dinfo.sha256_checksum ? `${dinfo.sha256_checksum.slice(0, 16)}...` : 'UNAVAILABLE';
-                  tr.innerHTML = `
-                    <td style="font-family:var(--font-mono); font-size:11px; font-weight:600;">${did}</td>
-                    <td><span class="badge badge-info">${dinfo.stage || dinfo.phase || 'phase7'}</span></td>
-                    <td>${sz}</td>
-                    <td style="font-family:var(--font-mono); font-size:10px;">${sha}</td>
-                    <td style="font-size:11px; color:#475569;">${dinfo.file_path || 'UNAVAILABLE'}</td>
-                  `;
-                  p7Tbody.appendChild(tr);
-                }
-              }
-            }
-          } catch (p6err) {
-            console.warn("Phase 6/7 endpoints loading error:", p6err);
-            showApiError(`Phase 6/7 endpoint error: ${p6err.message}`);
+            document.getElementById('liveFcstNext24h').innerText = (wf.next_24h_precipitation_mm !== null && wf.next_24h_precipitation_mm !== undefined)
+              ? `${wf.next_24h_precipitation_mm.toFixed(2)} ${wf.units?.precipitation || 'mm'} (Next 24h)`
+              : 'UNAVAILABLE';
+            document.getElementById('liveFcstWindow').innerText = (wf.valid_from_utc && wf.valid_to_utc)
+              ? `${wf.valid_from_utc} \u2192 ${wf.valid_to_utc}`
+              : 'UNAVAILABLE';
+            document.getElementById('liveLastError').innerText = wf.last_error ? `Last error: ${wf.last_error}` : 'No refresh errors';
           }
-
-          // Load V8 Stage 1 Live Weather & Source Health
-          try {
-            const [wfRes, wcRes, srcRes] = await Promise.all([
-              fetch('/api/weather/forecast'),
-              fetch('/api/weather/current'),
-              fetch('/api/sources')
-            ]);
-            if (wfRes.ok) {
-              const wf = await wfRes.json();
-              document.getElementById('liveFcstProvider').innerText = wf.provider || 'UNAVAILABLE';
-              document.getElementById('liveFcstModel').innerText = wf.model || 'UNAVAILABLE';
-              document.getElementById('liveFcstFreshness').innerText = wf.freshness || wf.status || 'UNAVAILABLE';
-              if (wf.retrieval_time_utc) {
-                const istStr = new Date(wf.retrieval_time_utc).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
-                document.getElementById('liveFcstUpdated').innerText = `${wf.retrieval_time_utc} (${istStr} IST)`;
-              } else {
-                document.getElementById('liveFcstUpdated').innerText = 'UNAVAILABLE';
-              }
-              document.getElementById('liveFcstNext24h').innerText = (wf.next_24h_precipitation_mm !== null && wf.next_24h_precipitation_mm !== undefined)
-                ? `${wf.next_24h_precipitation_mm.toFixed(2)} ${wf.units?.precipitation || 'mm'} (Next 24h)`
-                : 'UNAVAILABLE';
-              document.getElementById('liveFcstWindow').innerText = (wf.valid_from_utc && wf.valid_to_utc)
-                ? `${wf.valid_from_utc} → ${wf.valid_to_utc}`
-                : 'UNAVAILABLE';
-              document.getElementById('liveLastError').innerText = wf.last_error ? `Last error: ${wf.last_error}` : 'No refresh errors';
-            }
-            if (wcRes.ok) {
-              const wc = await wcRes.json();
-              document.getElementById('liveObsStatus').innerText = wc.status || 'UNAVAILABLE';
-              const hb = wc.historical_baseline || {};
-              document.getElementById('liveObsDetail').innerText = `Live gauges ${wc.status}; Phase 4.3 baseline (${hb.observed_rainfall_24h_mm ?? '--'} mm) is ${hb.status || 'STALE'}.`;
-            }
-            if (srcRes.ok) {
-              const src = await srcRes.json();
-              const list = src.sources || [];
-              const liveCnt = list.filter(s => s.status === 'LIVE' || s.status === 'RECENT').length;
-              document.getElementById('liveSourceHealth').innerText = `${liveCnt}/${list.length} LIVE/RECENT (${list.map(s => `${s.source_id}:${s.status}`).join(', ')})`;
-            }
-          } catch (werr) {
-            console.warn("Live weather status load error:", werr);
-            showApiError(`Live weather status error: ${werr.message}`);
+          if (wcRes.ok) {
+            const wc = await wcRes.json();
+            const obsEl = document.getElementById('liveObsStatus');
+            obsEl.innerText = wc.status || 'UNAVAILABLE';
+            obsEl.className = 'chip ' + (wc.status === 'LIVE' ? 'chip-success' : wc.status === 'STALE' ? 'chip-warning' : 'chip-muted');
+            const hb = wc.historical_baseline || {};
+            document.getElementById('liveObsDetail').innerText = `Gauges ${wc.status}; Phase 4.3 baseline (${hb.observed_rainfall_24h_mm ?? '--'} mm) is ${hb.status || 'STALE'}.`;
           }
-
-          // Load V8 Stage 3 Experimental ML Research Status
-          try {
-            const mlRes = await fetch('/api/ml/experimental');
-            if (mlRes.ok) {
-              const ml = await mlRes.json();
-              const cnt = ml.training_sample_counts || {};
-              const rf = (ml.candidate_models && ml.candidate_models[ml.model_name]) ? ml.candidate_models[ml.model_name].spatial_block_5fold_cv : {};
-              document.getElementById('mlExpStatusVal').innerText = `${ml.model_name || 'N/A'} (${ml.qualification_status || 'UNVALIDATED'})`;
-              document.getElementById('mlExpStatusDesc').innerText = `${ml.model_version || ''} | ${cnt.n_positive ?? '--'} pos / ${cnt.n_proxy_negative ?? '--'} proxy-neg | Spatial CV PR-AUC=${rf.pr_auc ?? '--'}, ROC-AUC=${rf.roc_auc ?? '--'} | Gate: ${ml.warning_gate || 'BLOCKED'}`;
-            }
-          } catch (mlerr) {
-            console.warn("Experimental ML status load error:", mlerr);
+          if (srcRes.ok) {
+            const src = await srcRes.json();
+            const list = src.sources || [];
+            const liveCnt = list.filter(s => s.status === 'LIVE' || s.status === 'RECENT').length;
+            document.getElementById('liveSourceHealth').innerText = `${liveCnt}/${list.length} LIVE/RECENT (${list.map(s => `${s.source_id}:${s.status}`).join(', ')})`;
           }
+        } catch (werr) {
+          console.warn("Live weather status load error:", werr);
+        }
 
-          await loadAlerts();
+        // Experimental ML
+        try {
+          const mlRes = await fetch('/api/ml/experimental');
+          if (mlRes.ok) {
+            const ml = await mlRes.json();
+            const cnt = ml.training_sample_counts || {};
+            const rf = (ml.candidate_models && ml.candidate_models[ml.model_name]) ? ml.candidate_models[ml.model_name].spatial_block_5fold_cv : {};
+            document.getElementById('mlExpStatusVal').innerText = `${ml.model_name || 'N/A'} (${ml.qualification_status || 'UNVALIDATED'})`;
+            document.getElementById('mlExpStatusDesc').innerText = `${ml.model_version || ''} | ${cnt.n_positive ?? '--'} pos / ${cnt.n_proxy_negative ?? '--'} proxy-neg | CV PR-AUC=${rf.pr_auc ?? '--'}, ROC-AUC=${rf.roc_auc ?? '--'} | Gate: ${ml.warning_gate || 'BLOCKED'}`;
+          }
+        } catch (mlerr) {
+          console.warn("Experimental ML status load error:", mlerr);
+        }
+
+        await loadAlerts();
 
       } catch (err) {
         console.error("Error loading dashboard data:", err);
+        updateHeaderStatus(false);
         showApiError(err.message || "Failed to fetch dashboard data from backend.");
       }
     }
 
-    // Operational Layer Switcher
+    // ─── Layer Switcher ───
     document.querySelectorAll('.layer-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         activeLayerType = e.target.getAttribute('data-layer');
-        if (gridLayer) {
-          gridLayer.setStyle(styleFeature);
-        }
+        if (gridLayer) gridLayer.setStyle(styleFeature);
         updateLegend();
       });
     });
 
-    // Panel Tabs
+    // ─── Side Panel Tabs ───
     document.querySelectorAll('.panel-tabs .tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const targetTab = e.target.getAttribute('data-tab');
         if (!targetTab) return;
         document.querySelectorAll('.panel-tabs .tab-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
-        document.getElementById('inspectorTab').style.display = targetTab === 'inspectorTab' ? 'block' : 'none';
-        document.getElementById('forecastTab').style.display = targetTab === 'forecastTab' ? 'block' : 'none';
-        document.getElementById('incidentsTab').style.display = targetTab === 'incidentsTab' ? 'block' : 'none';
+        ['inspectorTab','forecastTab','incidentsTab'].forEach(id => {
+          document.getElementById(id).style.display = id === targetTab ? 'block' : 'none';
+        });
       });
     });
 
-    // Bottom Tabs
+    // ─── Bottom Tabs ───
     document.querySelectorAll('[data-bottom-tab]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const target = btn.getAttribute('data-bottom-tab');
         document.querySelectorAll('[data-bottom-tab]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById('episodesTableTab').style.display = target === 'episodesTableTab' ? 'block' : 'none';
-        document.getElementById('manifestTableTab').style.display = target === 'manifestTableTab' ? 'block' : 'none';
-        document.getElementById('devSarTab').style.display = target === 'devSarTab' ? 'block' : 'none';
-        document.getElementById('phase5Tab').style.display = target === 'phase5Tab' ? 'block' : 'none';
-        if (document.getElementById('phase6Tab')) document.getElementById('phase6Tab').style.display = target === 'phase6Tab' ? 'block' : 'none';
-        if (document.getElementById('alertsTab')) document.getElementById('alertsTab').style.display = target === 'alertsTab' ? 'block' : 'none';
+        ['episodesTableTab','manifestTableTab','devSarTab','phase5Tab','phase6Tab','alertsTab'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = id === target ? (id === 'episodesTableTab' || id === 'manifestTableTab' ? 'block' : 'block') : 'none';
+        });
       });
     });
 
@@ -1974,7 +2269,7 @@
         if (covRes.ok) {
           const cov = await covRes.json();
           const nodes = (cov.distinct_native_model_nodes || []).length;
-          document.getElementById('alertSpatialCoverage').innerText = `${cov.status} (${cov.covered_cells}/${cov.total_cells} cells, ${nodes} native 0.25° nodes)`;
+          document.getElementById('alertSpatialCoverage').innerText = `${cov.status} (${cov.covered_cells}/${cov.total_cells} cells, ${nodes} native nodes)`;
         }
         if (hlthRes.ok) {
           const hl = await hlthRes.json();
@@ -1985,16 +2280,16 @@
           const clus = cluData.clusters || [];
           const cluTbody = document.getElementById('alertClustersTbody');
           cluTbody.innerHTML = clus.length === 0
-            ? '<tr><td colspan="6" style="text-align:center; color:#64748b;">No open alert clusters.</td></tr>'
+            ? '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:14px;">No open alert clusters.</td></tr>'
             : clus.map(c => `<tr>
-                <td><code>${c.cluster_id}</code></td>
+                <td style="font-family:var(--font-mono); font-size:10px; color:#93c5fd;">${c.cluster_id}</td>
                 <td>${c.forecast_zone_id}</td>
-                <td><strong>${c.max_severity}</strong></td>
+                <td><span class="sev-strip ${getSevClass(c.max_severity)}"></span><strong>${c.max_severity}</strong></td>
                 <td>${c.alert_count} (${c.active_count} active / ${c.acknowledged_count} ack)</td>
-                <td style="font-size:11px;"><code>${(c.grid_ids || []).slice(0, 4).join(', ')}${(c.grid_ids || []).length > 4 ? ' ...' : ''}</code></td>
-                <td>
-                  <button onclick="acknowledgeCluster('${c.cluster_id}')" style="margin-right:4px; padding:2px 8px; font-size:11px; cursor:pointer;">Ack Cluster</button>
-                  <button onclick="resolveCluster('${c.cluster_id}')" style="padding:2px 8px; font-size:11px; cursor:pointer;">Resolve Cluster</button>
+                <td style="font-family:var(--font-mono); font-size:10px;">${(c.grid_ids || []).slice(0, 4).join(', ')}${(c.grid_ids || []).length > 4 ? ' ...' : ''}</td>
+                <td style="display:flex; gap:5px; padding:6px 12px;">
+                  <button class="action-btn-sm" onclick="acknowledgeCluster('${c.cluster_id}')">Acknowledge</button>
+                  <button class="action-btn-sm" onclick="resolveCluster('${c.cluster_id}')">Resolve</button>
                 </td>
               </tr>`).join('');
         }
@@ -2004,7 +2299,7 @@
           const activeCnt = (st.ACTIVE || 0) + (st.ACKNOWLEDGED || 0);
           document.getElementById('alertTabCount').innerText = String(activeCnt);
           document.getElementById('alertSummaryStats').innerText =
-            `Active: ${st.ACTIVE || 0} | Ack: ${st.ACKNOWLEDGED || 0} | Resolved: ${st.RESOLVED || 0} | Expired: ${st.EXPIRED || 0}`;
+            `Active: ${st.ACTIVE || 0}  |  Ack: ${st.ACKNOWLEDGED || 0}  |  Resolved: ${st.RESOLVED || 0}  |  Expired: ${st.EXPIRED || 0}`;
           const lr = s.latest_evaluation_run;
           document.getElementById('alertLatestRun').innerText = lr
             ? `${lr.status} (${lr.completed_at_utc}, fresh=${lr.forecast_freshness}, evaluated=${lr.cells_evaluated})`
@@ -2018,36 +2313,36 @@
 
           const activeTbody = document.getElementById('activeAlertsTbody');
           activeTbody.innerHTML = activeList.length === 0
-            ? '<tr><td colspan="8" style="text-align:center; color:#64748b;">No active or acknowledged candidate alerts.</td></tr>'
+            ? '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">No active or acknowledged candidate alerts.</td></tr>'
             : activeList.map(a => {
                 const ackBtn = a.lifecycle_state === 'ACTIVE'
-                  ? `<button onclick="acknowledgeAlert('${a.alert_id}')" style="margin-right:4px; padding:2px 8px; font-size:11px; cursor:pointer;">Ack</button>`
+                  ? `<button class="action-btn-sm" onclick="acknowledgeAlert('${a.alert_id}')">Ack</button>`
                   : '';
-                const resBtn = `<button onclick="resolveAlert('${a.alert_id}')" style="padding:2px 8px; font-size:11px; cursor:pointer;">Resolve</button>`;
+                const resBtn = `<button class="action-btn-sm" onclick="resolveAlert('${a.alert_id}')">Resolve</button>`;
                 const loc = (a.latitude != null && a.longitude != null) ? `${Number(a.latitude).toFixed(4)}, ${Number(a.longitude).toFixed(4)}` : '--';
                 return `<tr>
-                  <td><code>${a.alert_id}</code></td>
-                  <td><strong>${a.severity}</strong></td>
-                  <td><code>${a.grid_id}</code><br><span style="font-size:11px; color:#64748b;">${loc}</span></td>
-                  <td style="max-width:260px; font-size:11px;"><strong>${a.rule_id}</strong><br>${a.explanation}</td>
-                  <td style="font-size:11px;">${a.data_source}<br>Freshness: <strong>${a.data_freshness}</strong></td>
-                  <td style="font-size:11px;"><code>${a.qualification_status}</code></td>
-                  <td style="font-size:11px;">${a.created_at_utc}<br>Upd: ${a.updated_at_utc}</td>
-                  <td><span class="badge badge-info">${a.lifecycle_state}</span><div style="margin-top:4px;">${ackBtn}${resBtn}</div></td>
+                  <td style="font-family:var(--font-mono); font-size:10px; color:#93c5fd;">${a.alert_id}</td>
+                  <td><span class="sev-strip ${getSevClass(a.severity)}"></span><strong>${a.severity}</strong></td>
+                  <td><span style="font-family:var(--font-mono); font-size:10px;">${a.grid_id}</span><br><span style="font-size:10px; color:var(--text-muted);">${loc}</span></td>
+                  <td style="max-width:220px; font-size:10px;"><strong>${a.rule_id}</strong><br><span style="color:var(--text-muted);">${a.explanation}</span></td>
+                  <td style="font-size:10px;">${a.data_source}<br><span style="font-weight:600;">${a.data_freshness}</span></td>
+                  <td style="font-family:var(--font-mono); font-size:9px; color:var(--text-muted);">${a.qualification_status}</td>
+                  <td style="font-size:10px; color:var(--text-muted);">${a.created_at_utc}<br>${a.updated_at_utc}</td>
+                  <td><span class="state-badge ${getStateClass(a.lifecycle_state)}">${a.lifecycle_state}</span><div style="margin-top:5px; display:flex; gap:4px;">${ackBtn}${resBtn}</div></td>
                 </tr>`;
               }).join('');
 
           const histTbody = document.getElementById('historyAlertsTbody');
           histTbody.innerHTML = histList.length === 0
-            ? '<tr><td colspan="7" style="text-align:center; color:#64748b;">No resolved or expired alerts yet.</td></tr>'
+            ? '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">No resolved or expired alerts yet.</td></tr>'
             : histList.map(a => `<tr>
-                <td><code>${a.alert_id}</code></td>
-                <td>${a.severity}</td>
-                <td><code>${a.grid_id}</code></td>
-                <td style="font-size:11px;">${a.rule_id}</td>
-                <td style="font-size:11px;"><code>${a.qualification_status}</code></td>
-                <td style="font-size:11px;">${a.updated_at_utc}${a.resolution_note ? '<br>' + a.resolution_note : ''}</td>
-                <td><span class="badge">${a.lifecycle_state}</span></td>
+                <td style="font-family:var(--font-mono); font-size:10px; color:#93c5fd;">${a.alert_id}</td>
+                <td><span class="sev-strip ${getSevClass(a.severity)}"></span>${a.severity}</td>
+                <td style="font-family:var(--font-mono); font-size:10px;">${a.grid_id}</td>
+                <td style="font-size:10px;">${a.rule_id}</td>
+                <td style="font-family:var(--font-mono); font-size:9px; color:var(--text-muted);">${a.qualification_status}</td>
+                <td style="font-size:10px; color:var(--text-muted);">${a.updated_at_utc}${a.resolution_note ? '<br>' + a.resolution_note : ''}</td>
+                <td><span class="state-badge ${getStateClass(a.lifecycle_state)}">${a.lifecycle_state}</span></td>
               </tr>`).join('');
         }
       } catch (e) {
@@ -2057,57 +2352,58 @@
 
     async function acknowledgeAlert(alertId) {
       await fetch(`/api/alerts/${encodeURIComponent(alertId)}/acknowledge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actor: 'dashboard_operator' })
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'dashboard_operator'})
       });
       await loadAlerts();
     }
 
     async function resolveAlert(alertId) {
       await fetch(`/api/alerts/${encodeURIComponent(alertId)}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actor: 'dashboard_operator', note: 'Resolved via dashboard' })
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'dashboard_operator', note: 'Resolved via dashboard'})
       });
       await loadAlerts();
     }
 
     async function acknowledgeCluster(clusterId) {
       await fetch(`/api/alerts/clusters/${encodeURIComponent(clusterId)}/acknowledge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actor: 'dashboard_operator' })
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'dashboard_operator'})
       });
       await loadAlerts();
     }
 
     async function resolveCluster(clusterId) {
       await fetch(`/api/alerts/clusters/${encodeURIComponent(clusterId)}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actor: 'dashboard_operator', note: 'Cluster resolved via dashboard' })
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'dashboard_operator', note: 'Cluster resolved via dashboard'})
       });
       await loadAlerts();
     }
 
     async function evaluateAlertsNow() {
-      await fetch('/api/alerts/evaluate', { method: 'POST' });
+      const btn = document.getElementById('evalAlertsNowBtn');
+      btn.disabled = true;
+      btn.innerText = 'Evaluating...';
+      await fetch('/api/alerts/evaluate', {method: 'POST'});
       await loadAlerts();
+      btn.disabled = false;
+      btn.innerText = 'Re-evaluate Now';
     }
 
-    // Dev Tab Toggle for Quarantined SAR Extent
+    // Dev: Quarantined SAR Toggle
     let sarDevVisible = false;
     document.getElementById('toggleSarDevBtn').addEventListener('click', () => {
       sarDevVisible = !sarDevVisible;
       const stateEl = document.getElementById('sarToggleState');
       if (sarDevVisible) {
         if (!map.hasLayer(sarExtentLayer)) sarExtentLayer.addTo(map);
-        stateEl.innerText = "Status: VISIBLE (Testing Fixture Only)";
-        stateEl.style.color = "#7c3aed";
+        stateEl.innerText = "VISIBLE (Testing Fixture Only)";
+        stateEl.style.color = "#a78bfa";
       } else {
         if (map.hasLayer(sarExtentLayer)) sarExtentLayer.remove();
-        stateEl.innerText = "Status: Hidden (Quarantined)";
+        stateEl.innerText = "Hidden (Quarantined)";
         stateEl.style.color = "var(--text-muted)";
       }
     });
