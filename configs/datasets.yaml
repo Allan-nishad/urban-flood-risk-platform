@@ -163,7 +163,9 @@ datasets:
         - "district (Bengaluru Urban district aggregate)"
       canonical_schema: "schemas.yaml -> flood_events"
       storage_path: "data/raw/flood_events/bengaluru_flood_events_curated.csv"
+      storage_status: "UNAVAILABLE"
       quarantine_path: "data/interim/flood_events_quarantine.csv"
+      quarantine_status: "UNAVAILABLE"
 
   weather_forecast:
     numerical_weather_prediction:

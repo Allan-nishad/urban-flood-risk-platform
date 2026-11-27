@@ -63,6 +63,7 @@ class DashboardDataStore:
         self.phase6_manifest: Dict[str, Any] = {}
         self.phase7_summary: Dict[str, Any] = {}
         self.phase7_uncertainty: Dict[str, Any] = {}
+        self.phase7_manifest: Dict[str, Any] = {}
         self.load_data()
 
     def load_data(self):
@@ -106,10 +107,13 @@ class DashboardDataStore:
                     "water_fraction": clean_val_for_json(dyn_props.get("water_fraction")),
                     "static_susceptibility_score": clean_val_for_json(dyn_props.get("static_susceptibility_score")),
                     "static_susceptibility_rank": clean_val_for_json(dyn_props.get("static_susceptibility_rank")),
-                    # Observed Layer
+                    # Observed Layer (Phase 4.3 constant 12.5mm baseline -> STALE)
                     "observed_rainfall_24h_mm": clean_val_for_json(dyn_props.get("observed_rainfall_24h_mm")),
                     "observed_api_decay_mm": clean_val_for_json(dyn_props.get("observed_api_decay_mm")),
                     "observed_rainfall_exposure_score": clean_val_for_json(dyn_props.get("observed_rainfall_exposure_score")),
+                    "observed_rainfall_state": "STALE",
+                    "observed_rainfall_source": "dynamic_risk_intelligence_bengaluru.parquet (Phase 4.3 constant 12.5mm)",
+                    "observed_rainfall_timestamp": "2026-11-05T00:00:00Z",
                     # Forecast Layer
                     "forecast_issue_time": clean_val_for_json(dyn_props.get("forecast_issue_time")),
                     "forecast_rainfall_3h_mm": clean_val_for_json(dyn_props.get("forecast_rainfall_3h_mm")),
@@ -126,7 +130,7 @@ class DashboardDataStore:
                     # Composite Dynamic Score
                     "dynamic_risk_prioritization_score": clean_val_for_json(dyn_props.get("dynamic_risk_prioritization_score")),
                     "dynamic_risk_rank": clean_val_for_json(dyn_props.get("dynamic_risk_rank")),
-                    "research_monitoring_level": clean_val_for_json(dyn_props.get("research_monitoring_level", "NORMAL"))
+                    "research_monitoring_level": clean_val_for_json(dyn_props.get("research_monitoring_level"))
                 }
                 enriched_features.append({
                     "type": "Feature",
@@ -315,11 +319,17 @@ class DashboardDataStore:
         # 7.3 Phase 6C: Independent Flood Evidence & ML Gate
         p6_gt_path = Path("data/processed/phase6/flood_evidence/flood_validation_ground_truth_matrix.parquet")
         p6_gate_path = Path("data/processed/phase6/flood_evidence/flood_evidence_gate_audit.parquet")
+        p6_inc_path = Path("data/processed/phase6/flood_evidence/independent_flood_incident_inventory.parquet")
         if p6_gt_path.is_file() and p6_gate_path.is_file():
             try:
                 df_gt = pd.read_parquet(p6_gt_path)
                 df_gate = pd.read_parquet(p6_gate_path)
+                p6_incidents = []
+                if p6_inc_path.is_file():
+                    df_p6_inc = pd.read_parquet(p6_inc_path)
+                    p6_incidents = [clean_dict_for_json(r) for r in df_p6_inc.to_dict(orient="records")]
                 self.phase6_flood_evidence = {
+                    "status": "AVAILABLE",
                     "total_domain_cells": len(df_gt),
                     "verified_positive_inundation_cells": int((df_gt["observation_status"] == "VERIFIED_POSITIVE").sum()),
                     "verified_monitored_negative_cells": int((df_gt["observation_status"] == "VERIFIED_NEGATIVE").sum()),
@@ -327,7 +337,11 @@ class DashboardDataStore:
                     "unobserved_percentage": round(float((df_gt["observation_status"] == "UNOBSERVED_DOMAIN_CELL").mean() * 100.0), 2),
                     "supervised_ml_flood_prediction_gate": str(df_gate["supervised_ml_flood_prediction_gate"].iloc[0]),
                     "gate_justification": str(df_gate["gate_justification"].iloc[0]),
-                    "recommended_modelling_paradigm": str(df_gate["recommended_modelling_paradigm"].iloc[0])
+                    "recommended_modelling_paradigm": str(df_gate["recommended_modelling_paradigm"].iloc[0]),
+                    "incident_inventory_source": "data/processed/phase6/flood_evidence/independent_flood_incident_inventory.parquet",
+                    "incident_record_count": len(p6_incidents),
+                    "incident_limitation": "Distinct from legacy /api/incidents (21 rows). 24 Phase 6 field records across 17 locations; 98.29% of domain unobserved.",
+                    "incident_records": p6_incidents,
                 }
             except Exception as e:
                 logger.warning(f"Error loading Phase 6 flood evidence: {e}")
@@ -415,6 +429,20 @@ class DashboardDataStore:
             "supervised_ml_flood_prediction_gate": "BLOCKED_BY_INSUFFICIENT_EVIDENCE",
             "final_acceptance_decision": "PHASE_7_COMPLETED_WITH_DOCUMENTED_LIMITATIONS"
         }
+
+        p7_man_path = self.reports_dir / "phase_7_manifests" / "phase_7_final_manifest.json"
+        if p7_man_path.is_file():
+            try:
+                with open(p7_man_path, "r", encoding="utf-8") as f:
+                    p7_man = json.load(f)
+                p7_man["status"] = "AVAILABLE"
+                p7_man["source"] = str(p7_man_path).replace("\\", "/")
+                self.phase7_manifest = p7_man
+            except Exception as e:
+                logger.warning(f"Error loading Phase 7 manifest: {e}")
+                self.phase7_manifest = {"status": "UNAVAILABLE", "source": str(p7_man_path).replace("\\", "/"), "detail": str(e)}
+        else:
+            self.phase7_manifest = {"status": "UNAVAILABLE", "source": str(p7_man_path).replace("\\", "/")}
 
         # 8. Overall Platform Summary
         advisory_count = 0
@@ -563,6 +591,9 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             return
         elif clean_path == "/api/phase7/uncertainty":
             self._send_json(self.datastore.phase7_uncertainty)
+            return
+        elif clean_path == "/api/phase7/manifest":
+            self._send_json(self.datastore.phase7_manifest)
             return
         elif clean_path == "/api/health":
             self._send_json({"status": "ok", "service": "urban-flood-risk-platform-dashboard"})

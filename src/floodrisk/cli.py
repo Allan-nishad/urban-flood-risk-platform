@@ -390,6 +390,10 @@ def process_rainfall(grid, rainfall_dir, start_date, end_date, method, out_panel
 
     # Search for files
     r_dir = Path(rainfall_dir)
+    if not r_dir.exists():
+        click.echo(f"DATA_STATE: UNAVAILABLE — rainfall directory '{rainfall_dir}' does not exist.")
+        click.echo("Please stage IMERG granules or verify the path. No synthetic stand-ins generated.")
+        return
     daily_records = []
 
     cur = s_dt
