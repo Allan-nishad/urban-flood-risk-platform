@@ -20,6 +20,9 @@ class LiveWeatherStore:
 
     def _init_schema(self) -> None:
         with self._lock, self._conn:
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+            self._conn.execute("PRAGMA busy_timeout=5000")
             self._conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS weather_records (
@@ -180,6 +183,51 @@ class LiveWeatherStore:
                 (provider, location_ref, latest["max_ret"]),
             ).fetchall()
             return [dict(r) for r in rows]
+
+    def get_latest_forecasts_by_zone(self, provider: str = "open_meteo") -> Dict[str, List[Dict[str, Any]]]:
+        """Return latest forecast rows grouped by location_ref (zone_id)."""
+        with self._lock:
+            latest = self._conn.execute(
+                """
+                SELECT MAX(retrieval_time_utc) AS max_ret
+                FROM weather_records
+                WHERE provider = ? AND data_type = 'FORECAST'
+                """,
+                (provider,),
+            ).fetchone()
+            if not latest or not latest["max_ret"]:
+                return {}
+            rows = self._conn.execute(
+                """
+                SELECT * FROM weather_records
+                WHERE provider = ? AND data_type = 'FORECAST' AND retrieval_time_utc = ?
+                ORDER BY location_ref ASC, valid_time_utc ASC, variable ASC
+                """,
+                (provider, latest["max_ret"]),
+            ).fetchall()
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for r in rows:
+            d = dict(r)
+            grouped.setdefault(d["location_ref"], []).append(d)
+        return grouped
+
+    def backup_database(self, backup_path: Path | str) -> str:
+        """Create a consistent online SQLite backup using sqlite3.Connection.backup()."""
+        dest = Path(backup_path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with self._lock:
+            dest_conn = sqlite3.connect(str(dest))
+            try:
+                self._conn.backup(dest_conn)
+            finally:
+                dest_conn.close()
+        return str(dest).replace("\\", "/")
+
+    def check_db_health(self) -> Dict[str, Any]:
+        with self._lock:
+            jm = self._conn.execute("PRAGMA journal_mode").fetchone()[0]
+            cnt = self._conn.execute("SELECT COUNT(*) AS cnt FROM weather_records").fetchone()["cnt"]
+        return {"status": "HEALTHY", "db_path": str(self.db_path).replace("\\", "/"), "journal_mode": jm, "weather_records": int(cnt)}
 
     def count_records(self) -> int:
         with self._lock:

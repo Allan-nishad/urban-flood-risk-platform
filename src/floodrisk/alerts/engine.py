@@ -5,12 +5,14 @@ import threading
 from typing import Any, Dict, Iterable, List, Optional
 import uuid
 
+from .clustering import cluster_alerts
 from .rules import (
     RESEARCH_DISCLAIMER,
     SEVERITY_RANK,
     AlertRuleConfig,
     evaluate_cell_candidate,
 )
+from .spatial import assign_cell_to_forecast_zone, summarize_spatial_coverage
 from .storage import AlertStore
 
 
@@ -108,6 +110,7 @@ class OperationalAlertEngine:
         observed_payload: Optional[Dict[str, Any]] = None,
         ml_support_by_grid: Optional[Dict[str, Dict[str, Any]]] = None,
         now_utc: Optional[datetime] = None,
+        zone_forecasts: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Run one full alert evaluation cycle over all provided grid cells."""
         with self._eval_lock:
@@ -120,8 +123,21 @@ class OperationalAlertEngine:
             fc_freshness = fc.get("freshness") or fc.get("status") or "UNAVAILABLE"
             fc_ret_utc = fc.get("retrieval_time_utc")
 
+            enriched_zones: Optional[Dict[str, Dict[str, Any]]] = None
+            if zone_forecasts is not None:
+                enriched_zones = {
+                    zid: self._enrich_forecast_summary(zfc, now_dt)
+                    for zid, zfc in zone_forecasts.items()
+                }
+                has_any_fresh_zone = any(
+                    (zfc.get("freshness") or zfc.get("status")) in ("LIVE", "RECENT") and zfc.get("hourly_forecast")
+                    for zfc in enriched_zones.values()
+                )
+            else:
+                has_any_fresh_zone = fc_freshness in ("LIVE", "RECENT") and bool(fc.get("hourly_forecast"))
+
             # Safety gate: never generate fresh-looking alerts from stale or unavailable data
-            if fc_freshness not in ("LIVE", "RECENT") or not fc.get("hourly_forecast"):
+            if not has_any_fresh_zone:
                 run_rec = {
                     "run_id": run_id,
                     "started_at_utc": now_str,
@@ -149,6 +165,7 @@ class OperationalAlertEngine:
             updated = 0
             suppressed = 0
             auto_resolved = 0
+            insufficient_coverage_cells = 0
 
             # Index open alerts by grid_id (one open candidate alert per grid cell)
             open_alerts: Dict[str, Dict[str, Any]] = {}
@@ -161,15 +178,29 @@ class OperationalAlertEngine:
 
             for cell in cell_list:
                 gid = str(cell.get("grid_id", ""))
+                cell_fc = fc
+                cov_meta: Optional[Dict[str, Any]] = None
+                if enriched_zones is not None:
+                    assigned_fc, cov_meta = assign_cell_to_forecast_zone(cell, enriched_zones)
+                    if assigned_fc is None:
+                        insufficient_coverage_cells += 1
+                        continue
+                    cell_fc = assigned_fc
+
                 cand = evaluate_cell_candidate(
                     cell=cell,
-                    forecast_summary=fc,
+                    forecast_summary=cell_fc,
                     observed_summary=observed_payload,
                     ml_support=ml_map.get(gid),
                     config=self.config,
                 )
                 if cand is None:
                     continue
+                if cov_meta is not None:
+                    cand["triggering_inputs"]["forecast_zone_id"] = cov_meta.get("forecast_zone_id")
+                    cand["triggering_inputs"]["distance_to_anchor_km"] = cov_meta.get("distance_to_anchor_km")
+                    cand["triggering_inputs"]["assignment_method"] = cov_meta.get("assignment_method")
+                    cand["triggering_inputs"]["spatial_forcing_scope"] = "MULTI_ANCHOR_SECTOR_0_25_DEG"
 
                 triggered_grids.add(cand["grid_id"])
                 existing = open_alerts.get(cand["grid_id"])
@@ -322,7 +353,13 @@ class OperationalAlertEngine:
         )
         return self.store.get_alert(alert_id)  # type: ignore[return-value]
 
-    def resolve_alert(self, alert_id: str, actor: str = "operator", note: Optional[str] = None) -> Dict[str, Any]:
+    def resolve_alert(
+        self,
+        alert_id: str,
+        actor: str = "operator",
+        note: Optional[str] = None,
+        now_utc: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
         alert = self.store.get_alert(alert_id)
         if alert is None:
             raise AlertNotFoundError(f"Alert '{alert_id}' not found")
@@ -331,7 +368,7 @@ class OperationalAlertEngine:
             raise InvalidLifecycleTransitionError(
                 f"Cannot resolve alert '{alert_id}' from state '{state}'; must be ACTIVE or ACKNOWLEDGED."
             )
-        now_str = _fmt_utc(datetime.now(timezone.utc))
+        now_str = _fmt_utc(now_utc or datetime.now(timezone.utc))
         self.store.update_alert_fields(
             alert_id,
             {
@@ -353,6 +390,36 @@ class OperationalAlertEngine:
             timestamp_utc=now_str,
         )
         return self.store.get_alert(alert_id)  # type: ignore[return-value]
+
+    def get_clusters(self, max_clusters: int = 50) -> List[Dict[str, Any]]:
+        open_alerts = self.store.list_alerts(lifecycle_state="ACTIVE", limit=2000) + self.store.list_alerts(
+            lifecycle_state="ACKNOWLEDGED", limit=2000
+        )
+        return cluster_alerts(open_alerts, max_clusters=max_clusters)
+
+    def acknowledge_cluster(self, cluster_id: str, actor: str = "operator", note: Optional[str] = None) -> Dict[str, Any]:
+        clusters = self.get_clusters(max_clusters=500)
+        target = next((c for c in clusters if c["cluster_id"] == cluster_id), None)
+        if target is None:
+            raise AlertNotFoundError(f"Cluster '{cluster_id}' not found or has no open alerts")
+        acked = []
+        for aid in target["alert_ids"]:
+            a = self.store.get_alert(aid)
+            if a and a["lifecycle_state"] == "ACTIVE":
+                acked.append(self.acknowledge_alert(aid, actor=actor, note=note or f"Cluster ack: {cluster_id}"))
+        return {"cluster_id": cluster_id, "acknowledged_count": len(acked), "alert_ids": [a["alert_id"] for a in acked]}
+
+    def resolve_cluster(self, cluster_id: str, actor: str = "operator", note: Optional[str] = None) -> Dict[str, Any]:
+        clusters = self.get_clusters(max_clusters=500)
+        target = next((c for c in clusters if c["cluster_id"] == cluster_id), None)
+        if target is None:
+            raise AlertNotFoundError(f"Cluster '{cluster_id}' not found or has no open alerts")
+        resolved = []
+        for aid in target["alert_ids"]:
+            a = self.store.get_alert(aid)
+            if a and a["lifecycle_state"] in ("ACTIVE", "ACKNOWLEDGED"):
+                resolved.append(self.resolve_alert(aid, actor=actor, note=note or f"Cluster resolve: {cluster_id}"))
+        return {"cluster_id": cluster_id, "resolved_count": len(resolved), "alert_ids": [a["alert_id"] for a in resolved]}
 
     def get_summary(self) -> Dict[str, Any]:
         counts = self.store.get_summary_counts()

@@ -72,7 +72,10 @@ class LiveWeatherRefresher:
 
         for attempt in range(self.max_retries):
             try:
-                res = self.adapter.fetch_forecast()
+                if getattr(self.adapter, "use_multi_zone", False) and hasattr(self.adapter, "fetch_multi_zone_forecast"):
+                    res = self.adapter.fetch_multi_zone_forecast()
+                else:
+                    res = self.adapter.fetch_forecast()
                 written = self.store.upsert_weather_records(res["records"], freshness_status="LIVE")
                 self.store.update_provider_health(
                     provider=res["provider"],

@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import socketserver
 import threading
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from urllib.parse import urlparse, parse_qs
 import pandas as pd
 import numpy as np
@@ -53,17 +53,24 @@ class DashboardDataStore:
         self.reports_dir = Path(reports_dir) if reports_dir else Path("reports")
         if weather_db_path is not None:
             db_p = Path(weather_db_path)
+        elif os.environ.get("FLOODRISK_DB_PATH"):
+            db_p = Path(os.environ["FLOODRISK_DB_PATH"])
         elif data_dir is not None:
             db_p = self.data_dir / "floodrisk_v8.db"
         else:
             db_p = Path("data/state/floodrisk_v8.db")
+        self.backup_dir = Path(os.environ.get("FLOODRISK_BACKUP_DIR", "data/state/backups"))
+        self.admin_token: Optional[str] = os.environ.get("FLOODRISK_ADMIN_TOKEN") or None
+        refresh_s = float(os.environ.get("FLOODRISK_REFRESH_INTERVAL_S", "1800"))
         from ..alerts import AlertStore, OperationalAlertEngine
-        from ..live import LiveWeatherRefresher, LiveWeatherStore
+        from ..live import LiveWeatherRefresher, LiveWeatherStore, OpenMeteoForecastAdapter
         self.weather_store = LiveWeatherStore(db_p)
         self.alert_store = AlertStore(db_p)
         self.alert_engine = OperationalAlertEngine(self.alert_store)
         self.refresher = LiveWeatherRefresher(
             self.weather_store,
+            adapter=OpenMeteoForecastAdapter(use_multi_zone=True),
+            refresh_interval_s=refresh_s,
             on_refresh_success=lambda _res: self.evaluate_alerts(),
         )
         self.summary: Dict[str, Any] = {}
@@ -546,15 +553,62 @@ class DashboardDataStore:
         }
 
     def get_health_payload(self) -> Dict[str, Any]:
+        from ..live import compute_freshness
         health_rows = self.weather_store.get_provider_health()
+        try:
+            db_health = self.weather_store.check_db_health()
+            db_ok = True
+        except Exception as e:
+            db_health = {"status": "UNHEALTHY", "error": str(e)}
+            db_ok = False
+
+        fc = self.get_weather_forecast_payload()
+        fc_freshness = fc.get("freshness", "UNAVAILABLE")
+        om_h = next((h for h in health_rows if h.get("provider") == "open_meteo"), {})
+        last_success = om_h.get("last_success_utc")
+        consec_fail = int(om_h.get("consecutive_failures", 0))
+        ml_ok = Path("models/v8_experimental/flood_risk_model_v8_exp.joblib").is_file()
+        spatial_cov = self.get_spatial_coverage_payload()
+        alert_sum = self.alert_engine.get_summary()
+
+        if not db_ok:
+            overall = "UNHEALTHY"
+        elif fc_freshness in ("LIVE", "RECENT") and consec_fail == 0:
+            overall = "HEALTHY"
+        else:
+            overall = "DEGRADED"
+
         return {
-            "status": "ok",
+            "status": overall,
             "service": "urban-flood-risk-platform-dashboard",
-            "database_status": "AVAILABLE",
+            "database_status": "AVAILABLE" if db_ok else "UNAVAILABLE",
+            "database": db_health,
             "database_path": str(self.weather_store.db_path).replace("\\", "/"),
             "stored_weather_records": self.weather_store.count_records(),
             "scheduler_running": self.refresher.is_running,
+            "forecast_freshness": fc_freshness,
+            "last_successful_refresh_utc": last_success,
+            "provider_consecutive_failures": consec_fail,
+            "spatial_coverage_status": spatial_cov.get("status"),
+            "ml_artifact_status": "AVAILABLE_BLOCKED" if ml_ok else "UNAVAILABLE",
+            "active_alerts": alert_sum.get("by_lifecycle_state", {}).get("ACTIVE", 0),
+            "latest_evaluation_run": alert_sum.get("latest_evaluation_run"),
+            "public_dispatch_enabled": False,
             "providers": health_rows,
+        }
+
+    def get_ready_payload(self) -> Tuple[int, Dict[str, Any]]:
+        try:
+            db_health = self.weather_store.check_db_health()
+            db_ok = db_health.get("status") == "HEALTHY"
+        except Exception:
+            db_ok = False
+        cells_ok = len(self.cells_geojson.get("features", [])) > 0
+        ready = db_ok and cells_ok
+        return (200 if ready else 503), {
+            "ready": ready,
+            "database_ok": db_ok,
+            "grid_cells_loaded": len(self.cells_geojson.get("features", [])),
         }
 
     def get_sources_payload(self) -> Dict[str, Any]:
@@ -779,8 +833,78 @@ class DashboardDataStore:
         }
         return inf.predict_records([rec])
 
+    def _build_zone_summary(self, rows: List[Dict[str, Any]], location_ref: str) -> Dict[str, Any]:
+        from ..live import compute_freshness
+        ret_utc = rows[0]["retrieval_time_utc"]
+        issue_utc = rows[0]["issue_time_utc"]
+        model_id = rows[0]["model_id"]
+        freshness = compute_freshness(
+            ret_utc,
+            live_hours=self.refresher.freshness_live_hours,
+            recent_hours=self.refresher.freshness_recent_hours,
+        )
+        by_time: Dict[str, Dict[str, Any]] = {}
+        units: Dict[str, str] = {}
+        req_lat, req_lon, nat_res = rows[0]["latitude"], rows[0]["longitude"], 0.25
+        try:
+            meta = json.loads(rows[0].get("source_metadata_json") or "{}")
+            req_lat = meta.get("requested_latitude", req_lat)
+            req_lon = meta.get("requested_longitude", req_lon)
+            nat_res = meta.get("native_resolution_deg", 0.25)
+        except Exception:
+            pass
+        for r in rows:
+            vt = r["valid_time_utc"]
+            units[r["variable"]] = r["unit"]
+            entry = by_time.setdefault(vt, {"valid_time_utc": vt})
+            entry[r["variable"]] = r["value"]
+            entry[f"{r['variable']}_status"] = r["quality_status"]
+        hourly = [by_time[k] for k in sorted(by_time.keys())]
+        first_24 = [h.get("precipitation") for h in hourly[:24] if h.get("precipitation") is not None]
+        next_24h = round(sum(first_24), 2) if first_24 else None
+        return {
+            "data_type": "FORECAST",
+            "provider": "open_meteo",
+            "model": model_id,
+            "status": freshness,
+            "freshness": freshness,
+            "location_ref": location_ref,
+            "requested_latitude": req_lat,
+            "requested_longitude": req_lon,
+            "latitude": rows[0]["latitude"],
+            "longitude": rows[0]["longitude"],
+            "native_resolution_deg": nat_res,
+            "issue_time_utc": issue_utc,
+            "retrieval_time_utc": ret_utc,
+            "valid_from_utc": hourly[0]["valid_time_utc"] if hourly else None,
+            "valid_to_utc": hourly[-1]["valid_time_utc"] if hourly else None,
+            "units": units,
+            "next_24h_precipitation_mm": next_24h,
+            "hourly_forecast": hourly,
+        }
+
+    def get_zone_forecasts_payload(self) -> Dict[str, Dict[str, Any]]:
+        grouped = self.weather_store.get_latest_forecasts_by_zone()
+        if not grouped:
+            return {}
+        return {zid: self._build_zone_summary(rows, zid) for zid, rows in grouped.items()}
+
+    def get_spatial_coverage_payload(self) -> Dict[str, Any]:
+        from ..alerts import summarize_spatial_coverage
+        cells = [
+            {
+                **f.get("properties", {}),
+                "latitude": f.get("properties", {}).get("centroid_lat"),
+                "longitude": f.get("properties", {}).get("centroid_lon"),
+            }
+            for f in self.cells_geojson.get("features", [])
+            if f.get("properties", {}).get("grid_id")
+        ]
+        zones = self.get_zone_forecasts_payload()
+        return summarize_spatial_coverage(cells, zones)
+
     def evaluate_alerts(self) -> Dict[str, Any]:
-        """Evaluate all loaded grid cells against current stored forecast & observed state."""
+        """Evaluate all loaded grid cells against multi-zone stored forecasts & observed state."""
         cells = [
             {
                 **f.get("properties", {}),
@@ -791,8 +915,26 @@ class DashboardDataStore:
             if f.get("properties", {}).get("grid_id")
         ]
         fc = self.get_weather_forecast_payload()
+        zones = self.get_zone_forecasts_payload()
         obs = self.get_weather_current_payload()
-        return self.alert_engine.evaluate(cells=cells, forecast_payload=fc, observed_payload=obs)
+        return self.alert_engine.evaluate(
+            cells=cells,
+            forecast_payload=fc,
+            observed_payload=obs,
+            zone_forecasts=zones if zones else None,
+        )
+
+    def backup_database(self, backup_path: Path | str) -> str:
+        return self.weather_store.backup_database(backup_path)
+
+    def get_alert_clusters_payload(self, max_clusters: int = 50) -> Dict[str, Any]:
+        clusters = self.alert_engine.get_clusters(max_clusters=max_clusters)
+        return {
+            "status": "AVAILABLE",
+            "public_dispatch_enabled": False,
+            "cluster_count": len(clusters),
+            "clusters": clusters,
+        }
 
     def get_alerts_payload(
         self,
@@ -945,6 +1087,16 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         elif clean_path == "/api/health":
             self._send_json(self.datastore.get_health_payload())
             return
+        elif clean_path == "/api/ready":
+            code, payload = self.datastore.get_ready_payload()
+            self._send_json(payload, status=code)
+            return
+        elif clean_path == "/api/spatial/coverage":
+            self._send_json(self.datastore.get_spatial_coverage_payload())
+            return
+        elif clean_path == "/api/alerts/clusters":
+            self._send_json(self.datastore.get_alert_clusters_payload())
+            return
         elif clean_path == "/api/sources":
             self._send_json(self.datastore.get_sources_payload())
             return
@@ -1043,8 +1195,29 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             f"HTTP {method} is not supported on '{self.path.split('?')[0]}'; use GET.",
         )
 
+    def _check_admin_auth(self) -> bool:
+        expected = self.datastore.admin_token
+        if not expected:
+            return True
+        auth_hdr = self.headers.get("Authorization", "")
+        x_hdr = self.headers.get("X-Admin-Token", "")
+        token = ""
+        if auth_hdr.startswith("Bearer "):
+            token = auth_hdr[7:].strip()
+        elif x_hdr:
+            token = x_hdr.strip()
+        if not token:
+            self._send_error_json(401, "UNAUTHORIZED", "Authentication required", "Provide Bearer or X-Admin-Token header.")
+            return False
+        if token != expected:
+            self._send_error_json(403, "FORBIDDEN", "Invalid credentials", "Provided admin token is invalid.")
+            return False
+        return True
+
     def _read_json_body(self) -> Dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 65536:
+            raise ValueError("PAYLOAD_TOO_LARGE")
         if length <= 0:
             return {}
         raw = self.rfile.read(length).decode("utf-8", errors="replace")
@@ -1059,32 +1232,69 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
         from ..alerts import AlertNotFoundError, InvalidLifecycleTransitionError
         clean_path = urlparse(self.path).path
         parts = [p for p in clean_path.split("/") if p]
-        # Supported POST endpoints:
-        #   /api/alerts/evaluate
-        #   /api/alerts/{id}/acknowledge
-        #   /api/alerts/{id}/resolve
+        is_supported = (
+            parts == ["api", "alerts", "evaluate"]
+            or parts == ["api", "system", "backup"]
+            or (len(parts) == 4 and parts[0] == "api" and parts[1] == "alerts" and parts[3] in ("acknowledge", "resolve"))
+            or (len(parts) == 5 and parts[0] == "api" and parts[1] == "alerts" and parts[2] == "clusters" and parts[4] in ("acknowledge", "resolve"))
+        )
+        if not is_supported:
+            self._method_not_allowed("POST")
+            return
+        if not self._check_admin_auth():
+            return
+
+        if parts == ["api", "system", "backup"]:
+            from datetime import datetime, timezone
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            bpath = self.datastore.backup_database(self.datastore.backup_dir / f"floodrisk_v8_{ts}.db")
+            self._send_json({"status": "OK", "backup_path": bpath})
+            return
+
         if parts == ["api", "alerts", "evaluate"]:
             run_rec = self.datastore.evaluate_alerts()
             self._send_json({"status": "OK", "evaluation_run": run_rec})
             return
 
-        if len(parts) == 4 and parts[0] == "api" and parts[1] == "alerts" and parts[3] in ("acknowledge", "resolve"):
-            alert_id = parts[2]
-            action = parts[3]
-            try:
-                body = self._read_json_body()
-            except Exception as e:
-                self._send_error_json(400, "INVALID_JSON", "Invalid JSON request body", str(e))
+        try:
+            body = self._read_json_body()
+        except ValueError as e:
+            if str(e) == "PAYLOAD_TOO_LARGE":
+                self._send_error_json(413, "PAYLOAD_TOO_LARGE", "Request body too large", "Max 65536 bytes allowed.")
                 return
-            actor = str(body.get("actor", "operator")).strip() or "operator"
-            note = body.get("note")
-            if note is not None:
-                note = str(note)
+            self._send_error_json(400, "INVALID_JSON", "Invalid JSON request body", str(e))
+            return
+        except Exception as e:
+            self._send_error_json(400, "INVALID_JSON", "Invalid JSON request body", str(e))
+            return
+
+        actor = str(body.get("actor", "operator")).strip() or "operator"
+        note = body.get("note")
+        if note is not None:
+            note = str(note)
+
+        if len(parts) == 5 and parts[2] == "clusters":
+            cluster_id, action = parts[3], parts[4]
             try:
-                if action == "acknowledge":
-                    updated = self.datastore.alert_engine.acknowledge_alert(alert_id, actor=actor, note=note)
-                else:
-                    updated = self.datastore.alert_engine.resolve_alert(alert_id, actor=actor, note=note)
+                res = (
+                    self.datastore.alert_engine.acknowledge_cluster(cluster_id, actor=actor, note=note)
+                    if action == "acknowledge"
+                    else self.datastore.alert_engine.resolve_cluster(cluster_id, actor=actor, note=note)
+                )
+                self._send_json({"status": "OK", "cluster": res})
+                return
+            except AlertNotFoundError as e:
+                self._send_error_json(404, "CLUSTER_NOT_FOUND", "Cluster not found", str(e))
+                return
+
+        if len(parts) == 4 and parts[0] == "api" and parts[1] == "alerts" and parts[3] in ("acknowledge", "resolve"):
+            alert_id, action = parts[2], parts[3]
+            try:
+                updated = (
+                    self.datastore.alert_engine.acknowledge_alert(alert_id, actor=actor, note=note)
+                    if action == "acknowledge"
+                    else self.datastore.alert_engine.resolve_alert(alert_id, actor=actor, note=note)
+                )
                 self._send_json({"status": "OK", "alert": updated})
                 return
             except AlertNotFoundError as e:
@@ -1093,8 +1303,6 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             except InvalidLifecycleTransitionError as e:
                 self._send_error_json(409, "INVALID_TRANSITION", "Invalid alert lifecycle transition", str(e))
                 return
-
-        self._method_not_allowed("POST")
 
     def do_PUT(self):
         self._method_not_allowed("PUT")
@@ -1179,6 +1387,7 @@ def run_dashboard(
             server.serve_forever()
         except KeyboardInterrupt:
             print("\n[Dashboard Server] Shutting down...")
+            ds.refresher.stop()
             server.shutdown()
             server.server_close()
     else:

@@ -45,6 +45,7 @@ class OpenMeteoForecastAdapter:
     """Adapter for Open-Meteo Forecast API preferring ECMWF IFS (`ecmwf_ifs025`)."""
 
     BASE_URL = "https://api.open-meteo.com/v1/forecast"
+    NATIVE_RESOLUTION_DEG = 0.25
     REQUIRED_VARS = ("precipitation", "rain", "temperature_2m", "relative_humidity_2m")
     EXPECTED_UNITS = {
         "precipitation": "mm",
@@ -52,6 +53,13 @@ class OpenMeteoForecastAdapter:
         "temperature_2m": "°C",
         "relative_humidity_2m": "%",
     }
+    BENGALURU_FORECAST_ZONES = (
+        {"zone_id": "bengaluru_centroid", "latitude": 12.9716, "longitude": 77.5946, "label": "Central Bengaluru"},
+        {"zone_id": "blr_north_west", "latitude": 13.0800, "longitude": 77.5000, "label": "North-West (Yelahanka/Peenya)"},
+        {"zone_id": "blr_north_east", "latitude": 13.0800, "longitude": 77.6900, "label": "North-East (Mahadevapura/KR Puram)"},
+        {"zone_id": "blr_south_west", "latitude": 12.9000, "longitude": 77.5000, "label": "South-West (Kengeri/RR Nagar)"},
+        {"zone_id": "blr_south_east", "latitude": 12.9000, "longitude": 77.6900, "label": "South-East (Bellandur/HSR)"},
+    )
 
     def __init__(
         self,
@@ -62,6 +70,7 @@ class OpenMeteoForecastAdapter:
         forecast_days: int = 3,
         timeout_s: float = 10.0,
         http_get: Optional[Callable[[str, float], Tuple[int, bytes]]] = None,
+        use_multi_zone: bool = False,
     ):
         _validate_coords(latitude, longitude)
         self.latitude = float(latitude)
@@ -71,11 +80,18 @@ class OpenMeteoForecastAdapter:
         self.forecast_days = int(forecast_days)
         self.timeout_s = float(timeout_s)
         self._http_get = http_get or _default_http_get
+        self.use_multi_zone = bool(use_multi_zone)
 
-    def build_url(self, model: Optional[str] = None) -> str:
+    def build_url(self, model: Optional[str] = None, zones: Optional[List[Dict[str, Any]]] = None) -> str:
+        if zones:
+            lats = ",".join(str(z["latitude"]) for z in zones)
+            lons = ",".join(str(z["longitude"]) for z in zones)
+        else:
+            lats = str(self.latitude)
+            lons = str(self.longitude)
         params = urllib.parse.urlencode({
-            "latitude": self.latitude,
-            "longitude": self.longitude,
+            "latitude": lats,
+            "longitude": lons,
             "hourly": ",".join(self.REQUIRED_VARS),
             "models": model or self.preferred_model,
             "forecast_days": self.forecast_days,
@@ -83,24 +99,15 @@ class OpenMeteoForecastAdapter:
         })
         return f"{self.BASE_URL}?{params}"
 
-    def fetch_forecast(self) -> Dict[str, Any]:
-        """Fetch, validate, and normalize hourly forecast records."""
-        retrieval_dt = datetime.now(timezone.utc)
-        retrieval_utc = retrieval_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        # Open-Meteo does not expose exact NWP cycle issue time; record floor 6h UTC cycle as nominal issue proxy
-        cycle_hour = (retrieval_dt.hour // 6) * 6
-        issue_utc = retrieval_dt.replace(hour=cycle_hour, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        url = self.build_url(self.preferred_model)
-        status_code, raw_bytes = self._http_get(url, self.timeout_s)
-        if status_code != 200:
-            raise ProviderError(f"Unexpected HTTP status {status_code} from Open-Meteo")
-
-        try:
-            payload = json.loads(raw_bytes.decode("utf-8"))
-        except Exception as e:
-            raise ProviderError(f"Invalid JSON from Open-Meteo: {e}") from e
-
+    def _parse_zone_payload(
+        self,
+        payload: Dict[str, Any],
+        location_ref: str,
+        req_lat: float,
+        req_lon: float,
+        retrieval_utc: str,
+        issue_utc: str,
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any], Tuple[float, float]]:
         if not isinstance(payload, dict) or payload.get("error"):
             raise ProviderError(f"Open-Meteo API error payload: {payload}")
 
@@ -109,7 +116,7 @@ class OpenMeteoForecastAdapter:
         if ret_lat is None or ret_lon is None:
             raise ProviderError("Missing latitude/longitude in Open-Meteo response")
         _validate_coords(float(ret_lat), float(ret_lon))
-        if abs(float(ret_lat) - self.latitude) > 1.0 or abs(float(ret_lon) - self.longitude) > 1.0:
+        if abs(float(ret_lat) - req_lat) > 1.0 or abs(float(ret_lon) - req_lon) > 1.0:
             raise ProviderError(f"Returned coordinates ({ret_lat}, {ret_lon}) out of Bengaluru tolerance")
 
         hourly = payload.get("hourly")
@@ -133,8 +140,11 @@ class OpenMeteoForecastAdapter:
         meta = {
             "provider_url": self.BASE_URL,
             "requested_model": self.preferred_model,
+            "requested_latitude": float(req_lat),
+            "requested_longitude": float(req_lon),
             "returned_latitude": float(ret_lat),
             "returned_longitude": float(ret_lon),
+            "native_resolution_deg": self.NATIVE_RESOLUTION_DEG,
             "elevation_m": payload.get("elevation"),
             "timezone": payload.get("timezone", "UTC"),
             "generationtime_ms": payload.get("generationtime_ms"),
@@ -148,7 +158,7 @@ class OpenMeteoForecastAdapter:
                 q_status = "AVAILABLE" if val is not None else "UNAVAILABLE"
                 records.append({
                     "provider": "open_meteo",
-                    "location_ref": self.location_ref,
+                    "location_ref": location_ref,
                     "latitude": float(ret_lat),
                     "longitude": float(ret_lon),
                     "data_type": "FORECAST",
@@ -162,7 +172,28 @@ class OpenMeteoForecastAdapter:
                     "source_metadata": meta,
                     "quality_status": q_status,
                 })
+        return records, meta, (round(float(ret_lat), 4), round(float(ret_lon), 4))
 
+    def fetch_forecast(self) -> Dict[str, Any]:
+        """Fetch, validate, and normalize hourly forecast records for the single anchor."""
+        retrieval_dt = datetime.now(timezone.utc)
+        retrieval_utc = retrieval_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        cycle_hour = (retrieval_dt.hour // 6) * 6
+        issue_utc = retrieval_dt.replace(hour=cycle_hour, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        url = self.build_url(self.preferred_model)
+        status_code, raw_bytes = self._http_get(url, self.timeout_s)
+        if status_code != 200:
+            raise ProviderError(f"Unexpected HTTP status {status_code} from Open-Meteo")
+
+        try:
+            payload = json.loads(raw_bytes.decode("utf-8"))
+        except Exception as e:
+            raise ProviderError(f"Invalid JSON from Open-Meteo: {e}") from e
+
+        records, meta, native_node = self._parse_zone_payload(
+            payload, self.location_ref, self.latitude, self.longitude, retrieval_utc, issue_utc
+        )
         return {
             "provider": "open_meteo",
             "model_id": self.preferred_model,
@@ -170,6 +201,54 @@ class OpenMeteoForecastAdapter:
             "retrieval_time_utc": retrieval_utc,
             "metadata": meta,
             "records": records,
+            "zones_fetched": 1,
+            "distinct_native_nodes": [native_node],
+        }
+
+    def fetch_multi_zone_forecast(self, zones: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """Fetch batched multi-coordinate forecasts for Bengaluru sector anchors in one HTTP call."""
+        zone_list = list(zones or self.BENGALURU_FORECAST_ZONES)
+        retrieval_dt = datetime.now(timezone.utc)
+        retrieval_utc = retrieval_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        cycle_hour = (retrieval_dt.hour // 6) * 6
+        issue_utc = retrieval_dt.replace(hour=cycle_hour, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        url = self.build_url(self.preferred_model, zones=zone_list)
+        status_code, raw_bytes = self._http_get(url, self.timeout_s)
+        if status_code != 200:
+            raise ProviderError(f"Unexpected HTTP status {status_code} from Open-Meteo")
+
+        try:
+            payload = json.loads(raw_bytes.decode("utf-8"))
+        except Exception as e:
+            raise ProviderError(f"Invalid JSON from Open-Meteo: {e}") from e
+
+        items = payload if isinstance(payload, list) else [payload]
+        if len(items) != len(zone_list):
+            raise ProviderError(f"Multi-zone length mismatch: expected {len(zone_list)}, got {len(items)}")
+
+        all_records: List[Dict[str, Any]] = []
+        native_nodes = set()
+        for zone, item in zip(zone_list, items):
+            recs, _meta, node = self._parse_zone_payload(
+                item,
+                zone["zone_id"],
+                float(zone["latitude"]),
+                float(zone["longitude"]),
+                retrieval_utc,
+                issue_utc,
+            )
+            all_records.extend(recs)
+            native_nodes.add(node)
+
+        return {
+            "provider": "open_meteo",
+            "model_id": self.preferred_model,
+            "issue_time_utc": issue_utc,
+            "retrieval_time_utc": retrieval_utc,
+            "records": all_records,
+            "zones_fetched": len(zone_list),
+            "distinct_native_nodes": sorted(native_nodes),
         }
 
 

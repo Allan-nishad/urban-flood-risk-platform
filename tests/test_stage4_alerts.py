@@ -143,7 +143,7 @@ def test_duplicate_suppression_cooldown_lifecycle_expiry_and_restart(tmp_path):
     with pytest.raises(InvalidLifecycleTransitionError):
         engine.acknowledge_alert(alert_id, actor="tester")
 
-    res = engine.resolve_alert(alert_id, actor="tester", note="Verified clear")
+    res = engine.resolve_alert(alert_id, actor="tester", note="Verified clear", now_utc=t0 + timedelta(minutes=20))
     assert res["lifecycle_state"] == "RESOLVED"
     assert res["qualification_status"] == "RESOLVED"
     with pytest.raises(InvalidLifecycleTransitionError):

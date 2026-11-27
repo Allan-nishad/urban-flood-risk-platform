@@ -684,10 +684,29 @@
             <strong>Summary:</strong>
             <span id="alertSummaryStats">Loading...</span> |
             Latest Run: <code id="alertLatestRun">--</code> |
+            Spatial Coverage: <code id="alertSpatialCoverage">--</code> |
+            System Health: <code id="systemHealthBadge">--</code> |
             Public Dispatch: <span class="badge" style="background:#fee2e2; color:#991b1b;">DISABLED</span>
           </div>
           <button id="evalAlertsNowBtn" onclick="evaluateAlertsNow()" style="padding:6px 12px; font-size:12px; font-weight:600; background:#0f172a; color:#fff; border:none; border-radius:4px; cursor:pointer;">Re-evaluate Alerts</button>
         </div>
+
+        <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Spatial Alert Clusters (5.5 km Sector Tiles)</h4>
+        <table class="data-table" style="margin-bottom:18px;">
+          <thead>
+            <tr>
+              <th>Cluster ID</th>
+              <th>Forecast Zone</th>
+              <th>Max Severity</th>
+              <th>Cells (Active / Ack)</th>
+              <th>Sample Grid IDs</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="alertClustersTbody">
+            <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading clusters...</td></tr>
+          </tbody>
+        </table>
 
         <h4 style="margin:8px 0; font-size:13px; color:#0f172a;">Active &amp; Acknowledged Candidate Alerts</h4>
         <table class="data-table" style="margin-bottom:18px;">
@@ -1945,10 +1964,40 @@
 
     async function loadAlerts() {
       try {
-        const [sumRes, listRes] = await Promise.all([
+        const [sumRes, listRes, cluRes, covRes, hlthRes] = await Promise.all([
           fetch('/api/alerts/summary'),
-          fetch('/api/alerts?limit=200')
+          fetch('/api/alerts?limit=200'),
+          fetch('/api/alerts/clusters'),
+          fetch('/api/spatial/coverage'),
+          fetch('/api/health')
         ]);
+        if (covRes.ok) {
+          const cov = await covRes.json();
+          const nodes = (cov.distinct_native_model_nodes || []).length;
+          document.getElementById('alertSpatialCoverage').innerText = `${cov.status} (${cov.covered_cells}/${cov.total_cells} cells, ${nodes} native 0.25° nodes)`;
+        }
+        if (hlthRes.ok) {
+          const hl = await hlthRes.json();
+          document.getElementById('systemHealthBadge').innerText = `${hl.status} (Fcst=${hl.forecast_freshness}, ML=${hl.ml_artifact_status})`;
+        }
+        if (cluRes.ok) {
+          const cluData = await cluRes.json();
+          const clus = cluData.clusters || [];
+          const cluTbody = document.getElementById('alertClustersTbody');
+          cluTbody.innerHTML = clus.length === 0
+            ? '<tr><td colspan="6" style="text-align:center; color:#64748b;">No open alert clusters.</td></tr>'
+            : clus.map(c => `<tr>
+                <td><code>${c.cluster_id}</code></td>
+                <td>${c.forecast_zone_id}</td>
+                <td><strong>${c.max_severity}</strong></td>
+                <td>${c.alert_count} (${c.active_count} active / ${c.acknowledged_count} ack)</td>
+                <td style="font-size:11px;"><code>${(c.grid_ids || []).slice(0, 4).join(', ')}${(c.grid_ids || []).length > 4 ? ' ...' : ''}</code></td>
+                <td>
+                  <button onclick="acknowledgeCluster('${c.cluster_id}')" style="margin-right:4px; padding:2px 8px; font-size:11px; cursor:pointer;">Ack Cluster</button>
+                  <button onclick="resolveCluster('${c.cluster_id}')" style="padding:2px 8px; font-size:11px; cursor:pointer;">Resolve Cluster</button>
+                </td>
+              </tr>`).join('');
+        }
         if (sumRes.ok) {
           const s = await sumRes.json();
           const st = s.by_lifecycle_state || {};
@@ -2020,6 +2069,24 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actor: 'dashboard_operator', note: 'Resolved via dashboard' })
+      });
+      await loadAlerts();
+    }
+
+    async function acknowledgeCluster(clusterId) {
+      await fetch(`/api/alerts/clusters/${encodeURIComponent(clusterId)}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actor: 'dashboard_operator' })
+      });
+      await loadAlerts();
+    }
+
+    async function resolveCluster(clusterId) {
+      await fetch(`/api/alerts/clusters/${encodeURIComponent(clusterId)}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actor: 'dashboard_operator', note: 'Cluster resolved via dashboard' })
       });
       await loadAlerts();
     }
